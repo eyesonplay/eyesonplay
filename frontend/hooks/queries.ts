@@ -17,6 +17,8 @@ export const queryKeys = {
   gpus: ["system", "gpus"] as const,
   models: ["models"] as const,
   settings: ["settings"] as const,
+  me: ["auth", "me"] as const,
+  apiKeys: ["api-keys"] as const,
 };
 
 const LIVE_REFRESH_MS = 3_000;
@@ -36,11 +38,39 @@ export function useMatch(id: string) {
 }
 
 export function useSessions(id: string) {
-  return useQuery({ queryKey: queryKeys.sessions(id), queryFn: () => api.listSessions(id), refetchInterval: SLOW_REFRESH_MS });
+  return useQuery({
+    queryKey: queryKeys.sessions(id),
+    queryFn: () => api.listSessions(id),
+    refetchInterval: SLOW_REFRESH_MS,
+  });
 }
 
 export function useSummary() {
   return useQuery({ queryKey: queryKeys.summary, queryFn: api.summary, refetchInterval: LIVE_REFRESH_MS });
+}
+
+export function useApiKeys() {
+  return useQuery({ queryKey: queryKeys.apiKeys, queryFn: api.listApiKeys });
+}
+
+export function useCreateApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.createApiKey,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys }),
+  });
+}
+
+export function useRevokeApiKey() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: api.revokeApiKey,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.apiKeys }),
+  });
+}
+
+export function useMe() {
+  return useQuery({ queryKey: queryKeys.me, queryFn: api.me, staleTime: Infinity, retry: false });
 }
 
 export function useHealth() {

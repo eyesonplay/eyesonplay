@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from typing import Annotated
 
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -31,6 +31,20 @@ class Settings(BaseSettings):
     # Development only: create tables directly instead of running Alembic
     # (lets the API run on SQLite without Postgres).
     auto_create_schema: bool = False
+
+    # Dashboard login. The admin is created on startup if no user has this
+    # email yet; an existing user's password is never overwritten.
+    admin_email: str | None = None
+    admin_password: SecretStr | None = None
+    session_ttl_hours: int = Field(default=24 * 14, ge=1)
+    # Send the session cookie over HTTPS only. Must be true in production.
+    cookie_secure: bool = False
+    login_max_failures: int = Field(default=5, ge=1)  # per email, per window
+    login_max_attempts_per_ip: int = Field(default=20, ge=1)  # per window
+    login_window_s: int = Field(default=15 * 60, ge=1)
+    feed_requests_per_minute: int = Field(default=120, ge=1)  # per API key
+    # Interactive API docs (/docs, /redoc, /openapi.json). Off in production.
+    api_docs: bool = True
 
     @field_validator("cors_origins", mode="before")
     @classmethod

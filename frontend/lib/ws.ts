@@ -1,3 +1,4 @@
+import { redirectToLogin } from "@/lib/auth-redirect";
 import { wsBaseUrl } from "@/lib/config";
 import type { LiveEnvelope } from "@/lib/types";
 
@@ -12,6 +13,8 @@ export interface SocketOptions {
 
 const PING_INTERVAL_MS = 20_000;
 const MAX_BACKOFF_MS = 15_000;
+const UNAUTHORIZED_CODE = 4401;
+const FORBIDDEN_CODE = 4403;
 const NOT_FOUND_CODE = 4404;
 
 /** WebSocket client for `/ws/matches/{id}` with automatic reconnect (exponential backoff). */
@@ -51,6 +54,15 @@ export class MatchSocket {
     socket.onclose = (event) => {
       this.clearPing();
       if (this.closedByClient) return;
+      if (event.code === UNAUTHORIZED_CODE) {
+        this.options.onStateChange("closed", "Signed out");
+        redirectToLogin();
+        return;
+      }
+      if (event.code === FORBIDDEN_CODE) {
+        this.options.onStateChange("closed", "Connection refused: the dashboard origin is not allowed (CORS_ORIGINS)");
+        return;
+      }
       if (event.code === NOT_FOUND_CODE) {
         this.options.onStateChange("closed", "Match not found");
         return;

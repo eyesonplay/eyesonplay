@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import { HealthIndicator } from "@/components/layout/health-indicator";
 import { NAV_ITEMS, isActive } from "@/components/layout/nav";
+import { UserMenu } from "@/components/layout/user-menu";
 import { cn } from "@/lib/utils";
 
 function Logo() {
@@ -46,8 +47,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t border-sidebar-border p-3">
+        <div className="flex flex-col gap-2 border-t border-sidebar-border p-3">
           <HealthIndicator variant="sidebar" />
+          <UserMenu />
         </div>
       </aside>
 
@@ -55,7 +57,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur lg:hidden">
           <div className="flex h-12 items-center justify-between px-4">
             <Logo />
-            <HealthIndicator variant="compact" />
+            <div className="flex items-center gap-2">
+              <HealthIndicator variant="compact" />
+              <UserMenu />
+            </div>
           </div>
           <nav className="scrollbar-thin flex gap-1 overflow-x-auto px-3 pb-2" aria-label="Main">
             {NAV_ITEMS.map(({ href, label, icon: Icon }) => (

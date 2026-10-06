@@ -7,7 +7,7 @@
 services:
   redis:
     ports:
-      - "6380:6379"  # host worker connects here
+      - "127.0.0.1:6380:6379"  # host worker connects here (Redis has no password)
   api:
     volumes:
       # Uploads shared with the host worker. Must be a path Docker Desktop

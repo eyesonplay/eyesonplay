@@ -47,8 +47,15 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-football}:${POSTGRES_PASSWORD:-football}@postgres:5432/${POSTGRES_DB:-football}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-4096}
+      # Dashboard login. Local development defaults; production must set its own
+      # (docker-compose.prod.yml refuses to start without them).
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-eyesonplay-admin}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
-      - "${API_PORT:-8000}:8000"
+      # Local only by default (the dev admin password is public); set
+      # BIND_ADDRESS=0.0.0.0 to reach the dev stack from other machines.
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8000}:8000"
     volumes:
       - media:/data/media
     depends_on:
@@ -84,7 +91,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "${BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - api
     restart: unless-stopped
