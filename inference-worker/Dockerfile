@@ -31,7 +31,7 @@ USER worker
 
 # CUDA 12 matches the PyTorch cu124 wheels below and runs on NVIDIA drivers >= 525;
 # a CUDA 13 base image refuses to start on hosts with older drivers.
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04 AS gpu
+FROM nvidia/cuda:12.9.2-cudnn-runtime-ubuntu24.04 AS gpu
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 python3-venv ffmpeg libgl1 libglib2.0-0 \
