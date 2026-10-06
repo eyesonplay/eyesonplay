@@ -10,10 +10,21 @@ broadcast camera.
   pause, resume, stop and restart processing from the dashboard.
 - FastAPI REST + WebSocket API, PostgreSQL, Redis streams and pub/sub; a worker
   that runs in Docker (mock or CPU/GPU) or natively (e.g. Apple MPS).
-- Integration feed for external systems, with API keys and external match links.
+- Integration feed for external systems, with API keys (created and revoked in
+  Settings) and external match links; rate limited per key.
+- Dashboard sign-in: Argon2id passwords, HttpOnly session cookies, cross-site
+  request protection, sign-in rate limits, user management CLI.
 - Live dashboard: video with detection overlay, event feed with filters, JSON
   inspector, metrics bar; video and mini view side by side, paced to the
   analysis so both show the same moment.
+
+### Deployment
+- Production compose file: Caddy with automatic HTTPS on one origin, security
+  headers and body limits, required secrets, nightly database backups.
+- Docker images for the API, dashboard and workers (CPU, GPU) published to
+  GitHub Container Registry on every release.
+- Website with documentation, and an accuracy benchmark to score detected
+  events against hand-labelled matches.
 
 ### Football
 - Ball and player detection (YOLO), Kalman ball tracking, player tracking.
