@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import time
 import uuid
 from collections.abc import AsyncIterator
@@ -10,6 +11,7 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import Depends, FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
 from sqlalchemy.exc import SQLAlchemyError
@@ -19,16 +21,20 @@ from app.background.status_listener import status_handler
 from app.background.stream_consumer import consume_stream
 from app.background.watchdog import Watchdog
 from app.core.config import Settings, get_settings
-from app.core.errors import install_error_handlers
+from app.core.errors import error_body, install_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.redis_keys import EVENTS_GROUP, EVENTS_STREAM, STATUS_GROUP, STATUS_STREAM
-from app.core.users import bootstrap_admin
+from app.core.sessions import COOKIE_NAME, user_for_token
+from app.core.users import bootstrap_admin, refuse_dev_admin
 from app.db.base import Base, create_engine, session_factory
 from app.db import models  # noqa: F401 - register tables
-from app.deps import require_user
+from app.deps import origin_allowed, require_user
 from app.routers import api_keys, auth, events, feed, matches, media, processing, settings, system, uploads, ws
 
 log = get_logger(component="main")
+REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+# Concurrent Argon2 verifications (memory-hard): more wait instead of exhausting RAM.
+PASSWORD_CHECKS = 4
 
 
 def create_app(
@@ -44,6 +50,7 @@ def create_app(
         app.state.settings = app_settings
         app.state.engine = engine
         app.state.session_factory = session_factory(engine)
+        app.state.password_checks = asyncio.Semaphore(PASSWORD_CHECKS)
         if not hasattr(app.state, "redis"):
             app.state.redis = Redis.from_url(app_settings.redis_url, decode_responses=True, health_check_interval=15)
         app_settings.media_dir.mkdir(parents=True, exist_ok=True)
@@ -69,6 +76,9 @@ def create_app(
         version="0.1.0",
         description="Real-time sports video analysis (football, tennis): matches, processing control, events and live feed.",
         lifespan=lifespan,
+        docs_url="/docs" if app_settings.api_docs else None,
+        redoc_url="/redoc" if app_settings.api_docs else None,
+        openapi_url="/openapi.json" if app_settings.api_docs else None,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -82,7 +92,8 @@ def create_app(
 
     @app.middleware("http")
     async def request_context(request: Request, call_next) -> Response:  # noqa: ANN001
-        request_id = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
+        supplied = request.headers.get("x-request-id", "")
+        request_id = supplied if REQUEST_ID.match(supplied) else uuid.uuid4().hex[:12]
         structlog.contextvars.bind_contextvars(request_id=request_id)
         started = time.perf_counter()
         try:
@@ -94,6 +105,18 @@ def create_app(
             log.info("request", method=request.method, path=request.url.path, status=response.status_code,
                      duration_ms=round((time.perf_counter() - started) * 1000, 1))  # fmt: skip
         return response
+
+    @app.middleware("http")
+    async def upload_guard(request: Request, call_next) -> Response:  # noqa: ANN001
+        """Uploads are large: check the session before FastAPI reads the body
+        (a route dependency would only run after the whole file is spooled)."""
+        if request.method == "POST" and request.url.path.rstrip("/") == "/api/uploads":
+            if not origin_allowed(request.headers.get("origin"), request.headers.get("host"), app_settings):
+                return JSONResponse(error_body("forbidden", "Cross-site request refused"), status_code=403)
+            async with request.app.state.session_factory() as db:
+                if await user_for_token(db, request.cookies.get(COOKIE_NAME)) is None:
+                    return JSONResponse(error_body("unauthorized", "Sign in to continue"), status_code=401)
+        return await call_next(request)
 
     # Dashboard routes need a signed-in user; the integration feed uses API keys,
     # the WebSocket checks the session itself, and liveness stays public.
@@ -111,6 +134,8 @@ async def _bootstrap_admin(app: FastAPI, settings: Settings) -> None:
         log.warning("ADMIN_EMAIL is set without ADMIN_PASSWORD; no admin created")
     try:
         async with app.state.session_factory() as db:
+            if settings.cookie_secure:  # production
+                await refuse_dev_admin(db, password)
             await bootstrap_admin(db, settings.admin_email, password)
     except (SQLAlchemyError, ValueError):
         log.exception("could not create the admin user (are migrations applied?)")

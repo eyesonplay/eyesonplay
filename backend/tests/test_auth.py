@@ -8,6 +8,7 @@ from datetime import UTC, datetime, timedelta
 import fakeredis.aioredis
 import pytest
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 from sqlalchemy import select
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -159,3 +160,81 @@ async def test_disabled_user_cannot_log_in(app):
         response = await c.post("/api/auth/login", json={"email": "gone@example.com", "password": "a-long-password"})
 
     assert response.status_code == 401
+
+
+# --- Hardening from the security review -------------------------------------
+
+
+async def test_uploads_are_refused_before_the_body_is_read(anon_client):
+    # A malformed multipart body: if it were parsed first this would be a 4xx parse error.
+    response = await anon_client.post(
+        "/api/uploads", content=b"x" * 4096, headers={"Content-Type": "multipart/form-data; boundary=nope"}
+    )
+
+    assert response.status_code == 401
+
+
+async def test_concurrent_guesses_cannot_beat_the_email_limit(anon_client):
+    import asyncio
+
+    guesses = [
+        anon_client.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": f"wrong-{i}-password"})
+        for i in range(12)
+    ]
+    responses = await asyncio.gather(*guesses)
+
+    assert sum(r.status_code == 401 for r in responses) <= 5
+    assert all(r.status_code in (401, 429) for r in responses)
+
+
+async def test_changing_a_password_signs_out_every_session(client, app):
+    from app.core.users import find_user, set_password
+
+    async with app.state.session_factory() as db:
+        await set_password(db, await find_user(db, ADMIN_EMAIL), "a-brand-new-password")
+
+    assert (await client.get("/api/matches")).status_code == 401
+
+
+@pytest.mark.parametrize("admin_password", ["eyesonplay-admin"])
+async def test_production_refuses_the_dev_admin_password(settings, redis, admin_password):
+    prod = settings.model_copy(update={"cookie_secure": True, "admin_email": "admin@example.com"})
+    prod.admin_password = SecretStr(admin_password)
+    app = create_app(prod, background_tasks=False, create_schema=True)
+    app.state.redis = redis
+
+    with pytest.raises(RuntimeError, match="development admin"):
+        async with app.router.lifespan_context(app):
+            pass
+
+
+async def test_production_refuses_a_leftover_dev_admin(settings, redis):
+    dev = settings.model_copy(update={"admin_email": "admin@example.com"})
+    dev.admin_password = SecretStr("eyesonplay-admin")
+    dev_app = create_app(dev, background_tasks=False, create_schema=True)
+    dev_app.state.redis = redis
+    async with dev_app.router.lifespan_context(dev_app):
+        pass  # the dev stack created admin@example.com / eyesonplay-admin
+
+    prod = settings.model_copy(update={"cookie_secure": True})  # its own admin from conftest
+    prod_app = create_app(prod, background_tasks=False, create_schema=True)
+    prod_app.state.redis = redis
+    with pytest.raises(RuntimeError, match="development admin"):
+        async with prod_app.router.lifespan_context(prod_app):
+            pass
+
+
+async def test_api_docs_can_be_turned_off(settings, redis):
+    app = create_app(settings.model_copy(update={"api_docs": False}), background_tasks=False, create_schema=True)
+    app.state.redis = redis
+    async with app.router.lifespan_context(app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            assert (await c.get("/docs")).status_code == 404
+            assert (await c.get("/openapi.json")).status_code == 404
+
+
+async def test_untrusted_request_ids_are_not_echoed(anon_client):
+    response = await anon_client.get("/api/system/live", headers={"x-request-id": "evil;id<script>"})
+
+    assert response.headers["x-request-id"] != "evil;id<script>"
+    assert len(response.headers["x-request-id"]) <= 64

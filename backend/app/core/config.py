@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     login_max_attempts_per_ip: int = Field(default=20, ge=1)  # per window
     login_window_s: int = Field(default=15 * 60, ge=1)
     feed_requests_per_minute: int = Field(default=120, ge=1)  # per API key
+    # Interactive API docs (/docs, /redoc, /openapi.json). Off in production.
+    api_docs: bool = True
 
     @field_validator("cors_origins", mode="before")
     @classmethod

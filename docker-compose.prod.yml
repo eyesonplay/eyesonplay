@@ -20,6 +20,7 @@ services:
       # Only Caddy reaches the API, so its X-Forwarded-For (the client's IP,
       # used for login rate limits) can be trusted.
       FORWARDED_ALLOW_IPS: "*"
+      API_DOCS: "false"
 
   frontend:
     ports: !reset []

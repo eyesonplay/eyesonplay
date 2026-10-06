@@ -1,4 +1,4 @@
-# One origin: the API (REST, WebSocket, media, API docs) and the dashboard.
+# One origin: the API (REST, WebSocket, media) and the dashboard.
 # Caddy obtains and renews the HTTPS certificate for {$DOMAIN} automatically.
 {$DOMAIN} {
 	encode zstd gzip
@@ -8,18 +8,35 @@
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Match video can come from external HLS/HTTPS sources (media/connect https:).
+		# Next.js needs inline scripts and styles.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' https: blob:; connect-src 'self' https: wss://{$DOMAIN}; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 		-Server
 	}
 
-	@api path /api/* /ws/* /media/* /docs /docs/* /redoc /openapi.json
-	handle @api {
+	# Large bodies only where videos are uploaded (the API checks the session
+	# before reading them); everything else is small JSON.
+	@upload path /api/uploads
+	handle @upload {
 		request_body {
 			max_size 4GB
 		}
 		reverse_proxy api:8000
 	}
 
+	@api path /api/* /ws/* /media/*
+	handle @api {
+		request_body {
+			max_size 10MB
+		}
+		reverse_proxy api:8000
+	}
+
 	handle {
+		request_body {
+			max_size 1MB
+		}
 		reverse_proxy frontend:3000
 	}
 }

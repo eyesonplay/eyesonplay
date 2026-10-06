@@ -74,15 +74,25 @@ eop exec api python -m app.cli disable-user coach@example.com  # signs them out 
 eop exec api python -m app.cli list-users
 ```
 
-Sessions last 14 days (`SESSION_TTL_HOURS`). After 5 failed sign-ins for one
-email, or 20 attempts from one IP address, sign-in is paused for 15 minutes.
+Sessions last 14 days (`SESSION_TTL_HOURS`); changing a password or disabling a
+user signs them out everywhere. After 5 sign-in attempts for one email, or 20
+from one IP address, without success, sign-in is paused for 15 minutes. (Anyone
+can therefore lock an email out for 15 minutes by guessing; that is the price of
+stopping password guessing.)
+
+Production refuses to start while the development account
+(`admin@example.com` / `eyesonplay-admin`) is configured or still has its
+default password in the database.
 
 ## 5. Integrations
 
 Other systems read matches and live events through the
 [integration feed](integration-feed.md) with an API key created in the dashboard
 (**Settings → API keys**). Keys are shown once and stored hashed; each key may
-make 120 requests per minute (`FEED_REQUESTS_PER_MINUTE`).
+make 120 requests per minute (`FEED_REQUESTS_PER_MINUTE`). Prefer the
+`X-API-Key` header over `?api_key=` (URLs end up in browser history and proxy
+logs; the API itself does not log query strings). Live WebSocket connections
+per key are not limited yet.
 
 ## 6. Backups and restore
 
@@ -113,6 +123,7 @@ take a backup first (`eop exec backup sh -c 'pg_dump -Fc > /backups/before-upgra
 ## 8. Operations
 
 - **Health:** `https://<DOMAIN>/api/system/live` (no login) for uptime checks;
+  the interactive API docs (`/docs`) are off in production (`API_DOCS=false`);
   the dashboard's **System** page shows workers, GPUs and models.
 - **Logs:** JSON lines on stdout: `eop logs -f api worker`.
 - **Scaling:** add GPU workers on other machines pointed at the same Redis and

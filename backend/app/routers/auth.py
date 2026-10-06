@@ -37,21 +37,23 @@ async def login(body: LoginIn, request: Request, response: Response, db: Db, red
     email = normalise_email(body.email)
     ip_key = f"login:ip:{request.client.host if request.client else 'unknown'}"
     email_key = f"login:email:{email}"
+    # Count the attempt before checking the password (atomic INCR), so parallel
+    # guesses cannot all slip past the limit; a successful sign-in resets it.
     for key, limit in ((ip_key, settings.login_max_attempts_per_ip), (email_key, settings.login_max_failures)):
-        if await rate_limit.count(redis, key) >= limit:
+        if await rate_limit.hit(redis, key, settings.login_window_s) > limit:
             wait = await rate_limit.retry_after(redis, key)
             raise TooManyRequestsError("Too many sign-in attempts. Try again later.", headers={"Retry-After": str(wait)})
-    await rate_limit.hit(redis, ip_key, settings.login_window_s)
 
     user = await find_user(db, email)
-    if user is None or user.disabled:
-        await run_in_threadpool(burn_verification, body.password)
-        valid = False
-    else:
-        valid = await run_in_threadpool(verify_password, user.password_hash, body.password)
+    async with request.app.state.password_checks:
+        if user is None or user.disabled:
+            await run_in_threadpool(burn_verification, body.password)
+            valid = False
+        else:
+            valid = await run_in_threadpool(verify_password, user.password_hash, body.password)
     if not valid or user is None:
-        await rate_limit.hit(redis, email_key, settings.login_window_s)
-        log.info("login failed", email=email)
+        # Only name real accounts in logs: people type passwords into the email field.
+        log.info("login failed", email=email if user is not None else "<unknown account>")
         raise UnauthorizedError(WRONG_CREDENTIALS)
 
     await rate_limit.reset(redis, email_key)

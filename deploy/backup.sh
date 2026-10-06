@@ -3,6 +3,7 @@
 # (default daily) into /backups, deleting dumps older than BACKUP_KEEP_DAYS.
 # Restore: pg_restore --clean --if-exists -d "$PGDATABASE" eyesonplay-<stamp>.dump
 set -u
+umask 077  # dumps contain every user's data: readable by the owner only
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 INTERVAL_S="${BACKUP_INTERVAL_S:-86400}"
 
