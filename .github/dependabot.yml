@@ -21,3 +21,8 @@ updates:
   - package-ecosystem: docker
     directories: [/backend, /frontend, /inference-worker]
     schedule: { interval: weekly }
+    ignore:
+      # The CUDA major version must move together with the PyTorch wheels
+      # (inference-worker/Dockerfile) and the drivers on GPU hosts.
+      - dependency-name: nvidia/cuda
+        update-types: ["version-update:semver-major"]
