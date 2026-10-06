@@ -56,6 +56,10 @@ class EngineConfig:
     # a goal the scoreboard confirms.
     goal_evidence_window_s: float = 90.0
     goal_depth_m: float = 2.0  # behind the goal line, inside the net
+    # The ball in the goal times a goal only this soon before the "GOAL"
+    # graphic (an earlier one is a save, a miss or a disallowed attempt).
+    goal_ball_before_graphic_s: float = 20.0
+    goal_candidate_cooldown_s: float = 5.0  # the ball bouncing in the net is one candidate
 
     enabled_events: frozenset[EventType] = field(default_factory=lambda: frozenset(EventType))
 

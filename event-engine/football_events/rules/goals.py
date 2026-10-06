@@ -41,6 +41,7 @@ class GoalRule:
         self._moments: list[_Moment] = []
         self._prev_x: float | None = None
         self._in_goal = False
+        self._last_candidate_t = float("-inf")
 
     def update(self, ctx: FrameContext) -> list[EventDraft]:
         drafts = self._ball_in_goal(ctx)
@@ -65,6 +66,9 @@ class GoalRule:
         if self._in_goal or prev is None or not 0 <= prev <= 100:
             return []  # already reported, or no in-play position before it
         self._in_goal = True
+        if ctx.t - self._last_candidate_t < ctx.config.goal_candidate_cooldown_s:
+            return []  # the same ball bouncing around the line
+        self._last_candidate_t = ctx.t
         self._moments.append(_Moment(ctx.obs, "ball_in_goal"))
         return [
             EventDraft(
@@ -106,14 +110,13 @@ class GoalRule:
             return []  # lower (disallowed goal or misread): new starting point
         if home_gain + away_gain == 1:
             team = "home" if home_gain else "away"
-            moment = self._earliest_moment()
-            evidence = ["scoreboard", *sorted({m.kind for m in self._moments})]
+            moment, evidence = self._goal_moment(ctx.config.goal_ball_before_graphic_s)
             self._moments.clear()
             return [
                 EventDraft(
                     EventType.GOAL,
                     SEEN_CONFIDENCE if moment else SCOREBOARD_CONFIDENCE,
-                    _details(team, after, evidence, ctx.t),
+                    _details(team, after, ["scoreboard", *evidence], ctx.t),
                     at=moment.obs if moment else None,
                 )
             ]
@@ -128,16 +131,27 @@ class GoalRule:
                 drafts.append(EventDraft(EventType.GOAL, UNSEEN_JUMP_CONFIDENCE, _details(team, (home, away), ["scoreboard"], ctx.t)))
         return drafts
 
-    def _earliest_moment(self) -> _Moment | None:
-        # The ball crossing the line is the exact moment; the graphic follows it.
-        for kind in ("ball_in_goal", "goal_graphic"):
-            seen = [m for m in self._moments if m.kind == kind]
-            if seen:
-                return min(seen, key=lambda m: m.obs.video_ts)
-        return None
+    def _goal_moment(self, ball_before_graphic_s: float) -> tuple[_Moment | None, list[str]]:
+        """When the goal happened, and the evidence used for it. The ball crossing
+        the line is exact, but only trusted shortly before the broadcaster's
+        "GOAL" graphic when there is one; otherwise the graphic times the goal."""
+        balls = [m for m in self._moments if m.kind == "ball_in_goal"]
+        graphics = [m for m in self._moments if m.kind == "goal_graphic"]
+        if not graphics:
+            return (max(balls, key=_time), ["ball_in_goal"]) if balls else (None, [])
+        graphic = min(graphics, key=_time)
+        g = graphic.obs.video_ts
+        near = [b for b in balls if g - ball_before_graphic_s <= b.obs.video_ts <= g]
+        if near:
+            return max(near, key=_time), ["ball_in_goal", "goal_graphic"]
+        return graphic, ["goal_graphic"]
 
     def _forget_old_moments(self, now: float, window_s: float) -> None:
         self._moments = [m for m in self._moments if now - m.obs.video_ts <= window_s]
+
+
+def _time(moment: _Moment) -> float:
+    return moment.obs.video_ts
 
 
 def _details(team: str, score: tuple[int, int], evidence: list[str], confirmed_at: float) -> dict[str, object]:

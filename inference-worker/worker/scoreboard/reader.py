@@ -9,6 +9,7 @@ engine confirms a goal only from repeated readings (see football_events.rules.go
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 
@@ -97,6 +98,8 @@ def load_scoreboard_reader() -> ScoreboardReader | None:
     except ImportError:
         log.warning("rapidocr not installed: goals cannot be confirmed from the scoreboard")
         return None
+    # RapidOCR warns on every frame without text (close-ups): keep only errors.
+    logging.getLogger("RapidOCR").setLevel(logging.ERROR)
     engine = RapidOCR()
 
     def ocr(image: np.ndarray, band: int) -> list[Token]:

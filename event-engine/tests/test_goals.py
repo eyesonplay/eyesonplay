@@ -117,3 +117,35 @@ def test_a_ball_wide_of_the_posts_is_not_a_candidate():
     wide = frames(hold((90, 20), PLAYERS, 5) + travel((90, 20), (101.5, 15), PLAYERS, 4) + hold((101.5, 15), PLAYERS, 10))
 
     assert of_type(run(EventEngine("m1"), wide), "goal_candidate") == []
+
+
+def test_an_earlier_ball_in_goal_far_from_the_goal_graphic_is_not_the_goal_moment():
+    # A save or a disallowed attempt 30 s before the goal: the graphic times the goal.
+    attempt = frames(
+        hold((90, 50), PLAYERS, 5) + travel((90, 50), (101.5, 49), PLAYERS, 4) + hold((101.5, 49), PLAYERS, 5),
+        start=30,
+    )
+    obs = (
+        with_score(stretch(3, 0), 0, 0, first_read=0)
+        + with_score(attempt, 0, 0, first_read=3)
+        + with_score(stretch(30, 50), 0, 0, first_read=5)
+        + with_score(stretch(2, 350), 0, 0, first_read=35, banner=True)  # "GOAL" at 35.0 s
+        + with_score(stretch(3, 370), 1, 0, first_read=37)
+    )
+
+    goals = of_type(run(EventEngine("m1"), obs), "goal")
+
+    assert len(goals) == 1
+    assert goals[0].video_timestamp == 35.0
+    assert goals[0].details["evidence"] == ["scoreboard", "goal_graphic"]
+
+
+def test_the_ball_bouncing_in_the_net_is_one_candidate():
+    bounce = (
+        hold((90, 50), PLAYERS, 5)
+        + travel((90, 50), (101.5, 49), PLAYERS, 4)
+        + [((99.8, 49), PLAYERS)]  # tracking noise: back on the line for a frame
+        + hold((101.4, 49), PLAYERS, 10)
+    )
+
+    assert len(of_type(run(EventEngine("m1"), frames(bounce)), "goal_candidate")) == 1
