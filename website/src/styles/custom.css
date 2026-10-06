@@ -12,6 +12,8 @@
 }
 .hero h1 { letter-spacing: -0.03em; }
 .hero h1 .accent { color: #fde047; }
+/* Ball yellow is unreadable on white: a darker gold in light mode. */
+:root[data-theme="light"] .hero h1 .accent { color: #ca8a04; }
 
 .demo {
   margin: 1.5rem 0 2rem;
