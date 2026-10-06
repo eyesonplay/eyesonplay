@@ -29,7 +29,7 @@ RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/c
     && pip install "/app[real]"
 USER worker
 
-FROM nvidia/cuda:12.6.3-cudnn-runtime-ubuntu24.04 AS gpu
+FROM nvidia/cuda:13.4.2-cudnn-runtime-ubuntu24.04 AS gpu
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 python3-venv ffmpeg libgl1 libglib2.0-0 \
