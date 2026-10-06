@@ -11,12 +11,21 @@ from typing import Any
 
 import numpy as np
 
-from football_events import BallObservation, Event, EventEngine, FrameObservation, PlayerObservation, Point
+from football_events import (
+    BallObservation,
+    Event,
+    EventEngine,
+    FrameObservation,
+    PlayerObservation,
+    Point,
+    ScoreboardObservation,
+)
 from worker.control.commands import MatchConfig
 from worker.detect.ball_filter import on_pitch
 from worker.detect.base import Detection, Detector
 from worker.ingest.source import Frame
 from worker.pitch.mapper import PitchMapper
+from worker.scoreboard.reader import ScoreboardReader
 from worker.track.ball_tracker import BallState, BallTracker, TrailPoint
 from worker.court.players import select_tennis_players
 from worker.teams.shirt_color import shirt_color
@@ -54,6 +63,7 @@ class FrameResult:
     pitch_calibrated: bool
     calibration: dict[str, Any] = field(default_factory=dict)
     teams: list[Team] = field(default_factory=list)
+    scoreboard: ScoreboardObservation | None = None
     processed_at: float = field(default_factory=time.time)
 
     def frame_message(self) -> dict[str, Any]:
@@ -83,6 +93,12 @@ class FrameResult:
                 for mp in self.players
             ],
             "teams": [t.to_dict() for t in self.teams],
+            # The broadcast score as last read (OCR); null when not read.
+            "scoreboard": (
+                {"home": self.scoreboard.home, "away": self.scoreboard.away, "goal_banner": self.scoreboard.goal_banner}
+                if self.scoreboard is not None
+                else None
+            ),
             "latency_ms": round((self.processed_at - f.wall_ts) * 1000, 1),
         }
 
@@ -115,8 +131,10 @@ class FramePipeline:
         detector: Detector,
         mapper: PitchMapper,
         engine: EventEngine | None,
+        scoreboard: ScoreboardReader | None = None,
     ) -> None:
         self._config = config
+        self._scoreboard = scoreboard
         self._detector = detector
         self._mapper = mapper
         self._engine = engine
@@ -136,6 +154,10 @@ class FramePipeline:
         observe = getattr(self._mapper, "observe", None)
         if observe is not None:
             observe(frame)  # automatic calibration refreshes its homography
+        board = None
+        if self._scoreboard is not None:
+            self._scoreboard.observe(frame)  # OCR runs on its own thread
+            board = self._scoreboard.latest()
         ball = self._ball_tracker.update(detections, frame.frame_number, frame.video_ts)
         people = self._player_tracker.update(detections) if self._player_tracker else untracked(detections)
         ball_pitch = self._mapper.to_pitch(ball.pixel_x, ball.pixel_y) if ball else None
@@ -148,7 +170,8 @@ class FramePipeline:
         trail = [(p, self._mapper.to_pitch(p.x, p.y)) for p in self._ball_tracker.history]
         t2 = time.perf_counter()
 
-        events = self._engine.update(self._observation(frame, ball, ball_pitch, players)) if self._engine else []
+        observation = self._observation(frame, ball, ball_pitch, players, board)
+        events = self._engine.update(observation) if self._engine else []
         t3 = time.perf_counter()
 
         return FrameResult(
@@ -162,6 +185,7 @@ class FramePipeline:
             pitch_calibrated=self._mapper.calibrated,
             calibration=_calibration(self._mapper),
             teams=self._teams.teams,
+            scoreboard=board,
         )
 
     def _accept(self, det: Detection, frame: Frame) -> bool:
@@ -186,7 +210,11 @@ class FramePipeline:
 
     @staticmethod
     def _observation(
-        frame: Frame, ball: BallState | None, ball_pitch: Point | None, players: list[MappedPlayer]
+        frame: Frame,
+        ball: BallState | None,
+        ball_pitch: Point | None,
+        players: list[MappedPlayer],
+        scoreboard: ScoreboardObservation | None = None,
     ) -> FrameObservation:
         ball_obs = None
         if ball is not None:
@@ -202,4 +230,4 @@ class FramePipeline:
             for mp in players
             if mp.obj.track_id is not None
         )
-        return FrameObservation(frame.frame_number, frame.video_ts, frame.wall_ts, ball_obs, player_obs)
+        return FrameObservation(frame.frame_number, frame.video_ts, frame.wall_ts, ball_obs, player_obs, scoreboard)

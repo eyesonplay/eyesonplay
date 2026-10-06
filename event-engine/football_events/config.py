@@ -50,6 +50,17 @@ class EngineConfig:
     corner_settle_s: float = 1.0
     corner_taker_radius_m: float = 4.0
 
+    # A new on-screen score must be read the same way this many times in a row.
+    goal_confirm_reads: int = 2
+    # How far back a "GOAL" graphic or the ball in the goal may be used to time
+    # a goal the scoreboard confirms.
+    goal_evidence_window_s: float = 90.0
+    goal_depth_m: float = 2.0  # behind the goal line, inside the net
+    # The ball in the goal times a goal only this soon before the "GOAL"
+    # graphic (an earlier one is a save, a miss or a disallowed attempt).
+    goal_ball_before_graphic_s: float = 20.0
+    goal_candidate_cooldown_s: float = 5.0  # the ball bouncing in the net is one candidate
+
     enabled_events: frozenset[EventType] = field(default_factory=lambda: frozenset(EventType))
 
     def __post_init__(self) -> None:
@@ -58,6 +69,7 @@ class EngineConfig:
             "possession_confirm_frames": self.possession_confirm_frames,
             "possession_release_frames": self.possession_release_frames,
             "ball_out_frames": self.ball_out_frames,
+            "goal_confirm_reads": self.goal_confirm_reads,
         }
         for name, value in positive_ints.items():
             if value < 1:

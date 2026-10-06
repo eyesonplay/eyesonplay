@@ -42,6 +42,8 @@ layer names so compatible weights load).
 | torch | 2.14 | Apache-2.0 (per package metadata) | worker (real mode, via ultralytics) |
 | torchvision | 0.29 | BSD | worker (real mode) |
 | catboost | 1.2 | Apache-2.0 | worker (optional, tennis bounces) |
+| rapidocr | 3.9 | Apache-2.0 | worker (real mode, scoreboard OCR for goals; bundles PaddleOCR ONNX models, Apache-2.0) |
+| onnxruntime | 1.2x | MIT | worker (real mode, runs the OCR models) |
 | scipy | 1.18 | BSD | worker (real mode, via ultralytics) |
 | nvidia-ml-py | 13.6 | BSD | worker (GPU metrics) |
 

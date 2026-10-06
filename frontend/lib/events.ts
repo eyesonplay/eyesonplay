@@ -54,6 +54,7 @@ const GROUP_OF: Record<string, Exclude<EventFilter, "all">> = {
   ball_out: "out",
   corner: "corner",
   goal: "goal",
+  goal_candidate: "goal",
   serve: "serve",
   fault: "serve",
   double_fault: "serve",
@@ -121,6 +122,16 @@ export function eventSummary(payload: Record<string, unknown>): string {
         : `#${n("track_id")} · speed spike`;
     case "ball_out":
       return `${payload.side ?? ""} line`;
+    case "goal": {
+      const score = payload.score as { home?: number; away?: number } | undefined;
+      const evidence = Array.isArray(payload.evidence) ? (payload.evidence as string[]) : [];
+      const parts = [String(payload.team ?? "")];
+      if (score) parts.push(`${score.home}–${score.away}`);
+      if (evidence.length) parts.push(evidence.map((e) => e.replaceAll("_", " ")).join(" + "));
+      return parts.filter(Boolean).join(" · ");
+    }
+    case "goal_candidate":
+      return `ball in the ${payload.goal ?? ""} goal (unconfirmed)`;
     case "corner":
       return `${String(payload.corner ?? "").replace("_", " ")}${n("taker_track_id") != null ? ` · taker #${n("taker_track_id")}` : ""}`;
     case "ball_lost":

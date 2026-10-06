@@ -16,6 +16,7 @@ from football_events.types import (
     FrameObservation,
     PlayerObservation,
     Point,
+    ScoreboardObservation,
 )
 
 __all__ = [
@@ -28,4 +29,5 @@ __all__ = [
     "FrameObservation",
     "PlayerObservation",
     "Point",
+    "ScoreboardObservation",
 ]

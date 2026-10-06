@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Football
+- Goals: the broadcast scoreboard is read on screen (RapidOCR) and a score that
+  goes up by one is a `goal` for that team, timed at the "GOAL" graphic or the
+  ball crossing the line when seen. The ball crossing the goal line between the
+  posts alone is a `goal_candidate`.
+
 ## 0.1.0 — first release
 
 Real-time sports video analysis for football and tennis, from a single

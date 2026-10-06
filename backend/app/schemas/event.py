@@ -13,7 +13,7 @@ EVENT_GROUPS: dict[str, tuple[str, ...]] = {
     "possession": ("possession", "possession_change"),
     "out": ("ball_out",),
     "corner": ("corner",),
-    "goal": ("goal",),
+    "goal": ("goal", "goal_candidate"),
     # tennis
     "serve": ("serve", "fault", "double_fault"),
     "hit": ("hit",),
