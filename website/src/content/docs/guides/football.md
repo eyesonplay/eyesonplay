@@ -30,5 +30,18 @@ holds while the camera follows the ball. Frames with too little grass
 | `shot_candidate`, `shot` | Speed spike towards the goal mouth |
 | `ball_out` | Outside the lines for several frames |
 | `corner` | Ball settles in a corner arc with a player next to it |
+| `goal_candidate` | Ball crosses the goal line between the posts (unconfirmed) |
+| `goal` | The broadcast score goes up by one (read on screen), timed at the goal moment |
+
+## Goals
+
+One broadcast camera cannot reliably see the ball cross the line: goals come
+with close-ups, replays and celebrations. EyesOnPlay therefore reads the
+**on-screen score** (OCR, about once a second, wherever the scoreboard sits):
+when it goes up by one and reads the same way twice, that is a goal for that
+team. The goal is stamped at the moment it happened when that was seen: the
+ball crossing the line between the posts, or the broadcaster's "GOAL" graphic.
+Without a scoreboard (e.g. a clean camera feed) a ball between the posts is
+only reported as a `goal_candidate`.
 
 Fields and thresholds: [Event reference](../../reference/event-schema/).

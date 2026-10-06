@@ -86,7 +86,7 @@ class MatchRunner:
             await self._fail(f"Internal processing error: {type(exc).__name__}: {exc}", metrics)
             return
         finally:
-            components.source.close()
+            components.close()
 
         self._log.info("session finished", outcome=outcome.value, **metrics.session_stats())
         if outcome is Outcome.COMPLETED:
@@ -101,7 +101,7 @@ class MatchRunner:
             if cfg.enable_event_detection
             else None
         )
-        pipeline = FramePipeline(cfg, components.detector, components.mapper, engine)
+        pipeline = FramePipeline(cfg, components.detector, components.mapper, engine, components.scoreboard)
         frames: Iterator[Frame] = iter(components.source)
         control: ControlSignal | None = None
         last_control = last_metrics = 0.0

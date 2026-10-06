@@ -101,7 +101,13 @@ const FOOTBALL_CALLS: Record<string, Omit<Banner, "t">> = {
 /** Calls worth a banner on the mini pitch, in time order (events arrive newest first). */
 export function footballBanners(events: readonly EventPayload[]): Banner[] {
   return events
-    .flatMap((e) => (FOOTBALL_CALLS[e.event] ? [{ t: e.video_timestamp, ...FOOTBALL_CALLS[e.event] }] : []))
+    .flatMap((e) => {
+      const call = FOOTBALL_CALLS[e.event];
+      if (!call) return [];
+      const score = e.event === "goal" ? (e.score as { home?: number; away?: number } | undefined) : undefined;
+      const text = score ? `${call.text} · ${score.home}–${score.away}` : call.text;
+      return [{ t: e.video_timestamp, ...call, text }];
+    })
     .sort((a, b) => a.t - b.t);
 }
 

@@ -15,6 +15,7 @@ from football_events.rules.ball_move import BallMoveRule
 from football_events.rules.ball_out import BallOutRule
 from football_events.rules.ball_presence import BallPresenceRule
 from football_events.rules.corners import CornerRule
+from football_events.rules.goals import GoalRule
 from football_events.rules.passes import PassRule
 from football_events.rules.possession import PossessionRule
 from football_events.rules.shots import ShotRule
@@ -40,6 +41,7 @@ class EventEngine:
         self._shots = ShotRule()
         self._out = BallOutRule()
         self._corners = CornerRule()
+        self._goals = GoalRule()
         self._move = BallMoveRule()
 
     @property
@@ -60,6 +62,7 @@ class EventEngine:
         drafts.extend(self._shots.update(ctx))
         drafts.extend(self._out.update(ctx))
         drafts.extend(self._corners.update(ctx))
+        drafts.extend(self._goals.update(ctx))
         drafts.extend(self._move.update(ctx))
         enabled = self._config.enabled_events
         return [self._finalise(obs, d) for d in drafts if d.event_type in enabled]
@@ -79,7 +82,8 @@ class EventEngine:
             possession=self._possession.state,
         )
 
-    def _finalise(self, obs: FrameObservation, draft: EventDraft) -> Event:
+    def _finalise(self, current: FrameObservation, draft: EventDraft) -> Event:
+        obs = draft.at or current
         return Event(
             event_id=self._new_id(),
             event_type=draft.event_type,

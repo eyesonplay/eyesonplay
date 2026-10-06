@@ -31,7 +31,10 @@ calibration. Locations inside events carry `coordinate_space: "pitch" | "pixel"`
 | `ball_out` | `side`, `location`, `last_touch_track_id`, `within_goal_mouth` | outside the pitch for `ball_out_frames` frames (pitch coordinates only) |
 | `corner` | `corner` (`top_left`…`bottom_right`), `goal_line`, `location`, `taker_track_id`, `settled_s` | the ball settles (below `corner_still_speed`) within `corner_radius_m` of a corner flag for `corner_settle_s`, with a player within `corner_taker_radius_m`; once per placement (pitch coordinates only) |
 
-Planned: `goal`, `throw_in`, `goal_kick`, `free_kick`, `cross`, `tackle`,
+| `goal_candidate` | `goal` (`left`/`right`), `location`, `last_touch_track_id` | the ball crosses the goal line between the posts, into the net (pitch coordinates). Unconfirmed: one camera cannot see whether it went over the bar |
+| `goal` | `team` (`home`/`away`), `score` `{home, away}`, `evidence`, `confirmed_at_s` | the broadcast's on-screen score goes up by one, read the same way `goal_confirm_reads` times in a row (OCR). Stamped at the goal moment when it was seen (`evidence`: `ball_in_goal`, `goal_graphic`), otherwise when the score changed. `home` is the team shown first (left) on the scoreboard. The first score read is the starting point; a lower score is not a goal |
+
+Planned: `throw_in`, `goal_kick`, `free_kick`, `cross`, `tackle`,
 `interception`, `save`.
 
 ## Tennis

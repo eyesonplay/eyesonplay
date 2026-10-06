@@ -105,3 +105,16 @@ describe("corner highlight", () => {
     expect(activeCorner(events, 30)).toBeNull();
   });
 });
+
+describe("goal calls", () => {
+  it("shows the new score on the goal banner", () => {
+    const goal = {
+      event: "goal",
+      video_timestamp: 12,
+      team: "home",
+      score: { home: 2, away: 1 },
+    } as unknown as EventPayload;
+
+    expect(footballBanners([goal])).toEqual([{ t: 12, text: "Goal · 2–1", tone: "in" }]);
+  });
+});

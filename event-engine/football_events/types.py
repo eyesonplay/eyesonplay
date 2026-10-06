@@ -19,12 +19,13 @@ class EventType(StrEnum):
     SHOT = "shot"
     BALL_OUT = "ball_out"
     CORNER = "corner"
+    GOAL_CANDIDATE = "goal_candidate"
+    GOAL = "goal"
 
 
 # Event types the architecture is designed to support later. They are not
 # produced yet; listing them keeps API/UI filters forward compatible.
 PLANNED_EVENT_TYPES: tuple[str, ...] = (
-    "goal",
     "throw_in",
     "goal_kick",
     "free_kick",
@@ -78,12 +79,28 @@ class PlayerObservation:
 
 
 @dataclass(frozen=True, slots=True)
+class ScoreboardObservation:
+    """The latest reading of the broadcast's on-screen score.
+
+    `read_id` increases with every new reading (frames between readings carry
+    the same one). Scores are `None` when the score could not be read, e.g.
+    while a "GOAL" graphic replaces it (`goal_banner`).
+    """
+
+    read_id: int
+    home: int | None
+    away: int | None
+    goal_banner: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class FrameObservation:
     frame_number: int
     video_ts: float  # seconds since start of the video source
     wall_ts: float  # unix seconds when the frame was captured
     ball: BallObservation | None
     players: tuple[PlayerObservation, ...] = ()
+    scoreboard: ScoreboardObservation | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +110,9 @@ class EventDraft:
     event_type: EventType
     confidence: float
     details: dict[str, Any] = field(default_factory=dict)
+    # Stamp the event at this earlier frame (e.g. the moment of a goal that is
+    # only confirmed later by the scoreboard) instead of the current one.
+    at: FrameObservation | None = None
 
 
 @dataclass(frozen=True, slots=True)

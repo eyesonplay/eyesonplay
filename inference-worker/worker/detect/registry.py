@@ -6,6 +6,8 @@ worker image stays small and starts without a GPU stack.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -26,11 +28,21 @@ DETECTOR_FAMILIES = {
 }
 
 
+if TYPE_CHECKING:
+    from worker.scoreboard.reader import ScoreboardReader
+
+
 @dataclass(slots=True)
 class Components:
     source: FrameSource
     detector: Detector
     mapper: PitchMapper
+    scoreboard: ScoreboardReader | None = None  # real football: confirms goals
+
+    def close(self) -> None:
+        self.source.close()
+        if self.scoreboard is not None:
+            self.scoreboard.close()
 
 
 def build_components(
@@ -91,6 +103,11 @@ def _real_components(
         # Generic detectors miss the tiny, blurred tennis ball: TrackNet tracks it.
         detector = TennisDetector(detector, TrackNetBallDetector(load_tracknet(settings.models_dir, device), device))
     mapper = _real_mapper(config, settings, device)
+    scoreboard = None
+    if config.sport == "football" and config.enable_event_detection:
+        from worker.scoreboard.reader import load_scoreboard_reader
+
+        scoreboard = load_scoreboard_reader()
     source = FFmpegSource(
         url=resolve_source(config, settings.media_dir),
         fps=config.processing_fps,
@@ -98,7 +115,7 @@ def _real_components(
         settings=settings,
         on_reconnect=on_reconnect,
     )
-    return Components(source, detector, mapper)
+    return Components(source, detector, mapper, scoreboard)
 
 
 def _real_mapper(config: MatchConfig, settings: WorkerSettings, device: str) -> PitchMapper:

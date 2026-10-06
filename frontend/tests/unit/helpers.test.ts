@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { clockToSeconds, matchFormSchema, secondsToClock, toMatchInput, defaultValues } from "@/components/matches/form-schema";
+import {
+  clockToSeconds,
+  matchFormSchema,
+  secondsToClock,
+  toMatchInput,
+  defaultValues,
+} from "@/components/matches/form-schema";
 import { uncalibratedReason } from "@/components/live/mini-pitch";
 import { eventGroup, eventSummary, filtersFor, matchesFilter } from "@/lib/events";
 import { formatBytes, formatFixed, formatVideoTime, sourceSummary } from "@/lib/format";
@@ -15,13 +21,23 @@ describe("event taxonomy", () => {
   });
 
   it("summarises payloads without inventing identities", () => {
-    expect(eventSummary({ event: "pass", from_track_id: 12, to_track_id: 27, distance: 18.4, distance_unit: "m" })).toBe(
-      "#12 → #27 · 18.4m",
-    );
+    expect(
+      eventSummary({ event: "pass", from_track_id: 12, to_track_id: 27, distance: 18.4, distance_unit: "m" }),
+    ).toBe("#12 → #27 · 18.4m");
     expect(eventSummary({ event: "pass", from_track_id: 1, to_track_id: 2, distance: 9, distance_unit: "m" })).toBe(
       "#1 → #2 · 9.0m",
     );
     expect(eventSummary({ event: "ball_out", side: "left" })).toBe("left line");
+    expect(
+      eventSummary({
+        event: "goal",
+        team: "away",
+        score: { home: 1, away: 2 },
+        evidence: ["scoreboard", "goal_graphic"],
+      }),
+    ).toBe("away · 1–2 · scoreboard + goal graphic");
+    expect(eventSummary({ event: "goal_candidate", goal: "right" })).toBe("ball in the right goal (unconfirmed)");
+    expect(eventGroup("goal_candidate")).toBe("goal");
   });
 });
 
@@ -31,7 +47,9 @@ describe("formatters", () => {
     expect(formatFixed(12.345, 1, " fps")).toBe("12.3 fps");
     expect(formatBytes(1536)).toBe("1.5 KB");
     expect(formatVideoTime(3725)).toBe("1:02:05");
-    expect(sourceSummary("hls", "https://cdn.example.com/live/match.m3u8?token=x")).toBe("cdn.example.com/live/match.m3u8");
+    expect(sourceSummary("hls", "https://cdn.example.com/live/match.m3u8?token=x")).toBe(
+      "cdn.example.com/live/match.m3u8",
+    );
     expect(sourceSummary("upload", "uploads/abc.mp4")).toBe("abc.mp4");
   });
 });
@@ -41,7 +59,9 @@ describe("match form schema", () => {
 
   it("validates source URLs per type", () => {
     expect(matchFormSchema.safeParse({ ...base, video_source: "ftp://x" }).success).toBe(false);
-    expect(matchFormSchema.safeParse({ ...base, video_source_type: "rtmp", video_source: "https://x" }).success).toBe(false);
+    expect(matchFormSchema.safeParse({ ...base, video_source_type: "rtmp", video_source: "https://x" }).success).toBe(
+      false,
+    );
     expect(matchFormSchema.safeParse({ ...base, video_source: "https://x/live.m3u8" }).success).toBe(true);
     expect(matchFormSchema.safeParse({ ...base, video_source: "" }).success).toBe(true); // draft
   });
@@ -82,6 +102,8 @@ describe("tennis events", () => {
     expect(eventSummary({ event: "point_won", winner: "near", reason: "double_bounce", rally_length: 5 })).toBe(
       "near wins · double bounce · rally 5",
     );
-    expect(eventSummary({ event: "serve", player: "far", serve_number: 2, court: "ad" })).toBe("far · serve 2 · ad court");
+    expect(eventSummary({ event: "serve", player: "far", serve_number: 2, court: "ad" })).toBe(
+      "far · serve 2 · ad court",
+    );
   });
 });
