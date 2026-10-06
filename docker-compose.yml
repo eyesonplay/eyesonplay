@@ -1,0 +1,96 @@
+# Phase 1: everything runs without a GPU. The worker defaults to INFERENCE_MODE=mock.
+#   docker compose up --build            -> http://localhost:3000
+# Real CV on CPU:  docker compose -f docker-compose.yml -f docker-compose.real.yml up --build
+# NVIDIA GPU:      docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+name: pitchside
+
+x-common-env: &common-env
+  REDIS_URL: redis://redis:6379/0
+  MEDIA_DIR: /data/media
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-football}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-football}
+      POSTGRES_DB: ${POSTGRES_DB:-football}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-football} -d ${POSTGRES_DB:-football}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # RDB snapshots only: written atomically, so an abrupt stop can never leave a
+    # corrupt file (AOF did, under the per-frame "latest frame" writes). Redis
+    # holds transient state; matches and events are persisted in Postgres.
+    command: ["redis-server", "--appendonly", "no", "--save", "10", "100", "--save", "60", "1"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: ./backend
+    environment:
+      <<: *common-env
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-football}:${POSTGRES_PASSWORD:-football}@postgres:5432/${POSTGRES_DB:-football}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-4096}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - media:/data/media
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      dockerfile: inference-worker/Dockerfile
+      target: cpu
+    environment:
+      <<: *common-env
+      INFERENCE_MODE: ${INFERENCE_MODE:-mock}
+      MAX_CONCURRENT_MATCHES: ${MAX_CONCURRENT_MATCHES:-4}
+      MODELS_DIR: /data/models
+      ALLOW_PRIVATE_SOURCES: ${ALLOW_PRIVATE_SOURCES:-false}
+    volumes:
+      - media:/data/media
+      - models:/data/models
+    depends_on:
+      redis:
+        condition: service_healthy
+    stop_grace_period: 15s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  media:
+  models:

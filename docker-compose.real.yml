@@ -1,0 +1,8 @@
+# Real computer vision on CPU (FFmpeg + YOLO). Slow, but works on any machine.
+services:
+  worker:
+    build:
+      target: real-cpu
+    environment:
+      INFERENCE_MODE: real
+      MAX_CONCURRENT_MATCHES: ${MAX_CONCURRENT_MATCHES:-1}

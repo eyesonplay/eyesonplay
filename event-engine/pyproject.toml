@@ -1,0 +1,19 @@
+[project]
+name = "football-events"
+version = "0.1.0"
+description = "Rule-based football and tennis event detection from tracked ball/player observations. Pure Python, no I/O."
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5"]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["football_events*", "tennis_events*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

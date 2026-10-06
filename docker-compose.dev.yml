@@ -1,0 +1,15 @@
+# Local development: lets a worker running natively on the host (e.g. real
+# inference on Apple MPS) join the Docker stack.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml stop worker
+#   cd inference-worker && REDIS_URL=redis://localhost:6380/0 INFERENCE_MODE=real \
+#     MEDIA_DIR=$HOME/.pitchside/media .venv/bin/python -m worker.main
+services:
+  redis:
+    ports:
+      - "6380:6379"  # host worker connects here
+  api:
+    volumes:
+      # Uploads shared with the host worker. Must be a path Docker Desktop
+      # shares (your home folder is shared by default; /opt/homebrew is not).
+      - ${MEDIA_HOST_DIR:-${HOME}/.pitchside/media}:/data/media

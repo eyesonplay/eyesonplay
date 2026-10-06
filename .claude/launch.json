@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "api",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd backend && DATABASE_URL=sqlite+aiosqlite:///./dev.db REDIS_URL=redis://localhost:6379/5 MEDIA_DIR=./media AUTO_CREATE_SCHEMA=true .venv/bin/uvicorn app.main:app --port 8000"],
+      "port": 8000
+    },
+    {
+      "name": "worker",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd inference-worker && REDIS_URL=redis://localhost:6379/5 INFERENCE_MODE=mock MEDIA_DIR=../backend/media WORKER_ID=local-worker .venv/bin/python -m worker.main"],
+      "port": 8001
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "frontend", "dev"],
+      "port": 3000
+    }
+  ]
+}

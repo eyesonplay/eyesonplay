@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: inference-worker
+Version: 0.1.0
+Summary: Football video inference worker: ingestion, detection, tracking, pitch mapping and event publishing.
+Requires-Python: >=3.12
+Requires-Dist: football-events
+Requires-Dist: numpy>=1.26
+Requires-Dist: pydantic>=2.7
+Requires-Dist: pydantic-settings>=2.3
+Requires-Dist: redis>=5.0
+Requires-Dist: structlog>=24.1
+Provides-Extra: real
+Requires-Dist: opencv-python-headless>=4.9; extra == "real"
+Requires-Dist: ultralytics>=8.3; extra == "real"
+Requires-Dist: nvidia-ml-py>=12.535; extra == "real"
+Provides-Extra: dev
+Requires-Dist: pytest>=8; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+Requires-Dist: pytest-cov>=5; extra == "dev"
+Requires-Dist: fakeredis>=2.23; extra == "dev"

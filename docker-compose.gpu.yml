@@ -1,0 +1,16 @@
+# NVIDIA GPU worker (requires the NVIDIA Container Toolkit on the host).
+# The frontend, API and databases are unchanged and still run without a GPU.
+services:
+  worker:
+    build:
+      target: gpu
+    environment:
+      INFERENCE_MODE: real
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${GPU_COUNT:-1}
+              capabilities: [gpu]
