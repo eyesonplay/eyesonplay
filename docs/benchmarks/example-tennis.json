@@ -1,0 +1,13 @@
+{
+  "sport": "tennis",
+  "source": "EXAMPLE ONLY: illustrates the format; not labels of a real video",
+  "labelled_until_s": 4.0,
+  "events": [
+    { "t": 0.48, "event": "serve", "player": "near" },
+    { "t": 0.80, "event": "bounce", "in": true },
+    { "t": 1.16, "event": "hit", "player": "far" },
+    { "t": 2.08, "event": "bounce", "in": true },
+    { "t": 2.48, "event": "hit", "player": "near" },
+    { "t": 3.24, "event": "bounce", "in": true }
+  ]
+}
