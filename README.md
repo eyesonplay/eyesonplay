@@ -2,6 +2,9 @@
 
 [![CI](https://github.com/eyesonplay/eyesonplay/actions/workflows/ci.yml/badge.svg)](https://github.com/eyesonplay/eyesonplay/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+[![Website](https://img.shields.io/badge/docs-eyesonplay.com-22c55e.svg)](https://eyesonplay.com)
+
+**Website and documentation: [eyesonplay.com](https://eyesonplay.com)**
 
 ![EyesOnPlay: real-time sports video analysis, football mini pitch and tennis mini court](docs/images/hero.png)
 
