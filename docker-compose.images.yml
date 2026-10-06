@@ -1,0 +1,15 @@
+# Run the published images (GitHub Container Registry) instead of building:
+#   EOP_VERSION=0.1.0 docker compose -f docker-compose.yml -f docker-compose.gpu.yml \
+#     -f docker-compose.prod.yml -f docker-compose.images.yml up -d
+# EOP_WORKER: worker-gpu (NVIDIA, default), worker-real (CPU) or worker (mock only).
+
+services:
+  api:
+    image: ghcr.io/eyesonplay/eyesonplay-api:${EOP_VERSION:-latest}
+    build: !reset null
+  frontend:
+    image: ghcr.io/eyesonplay/eyesonplay-frontend:${EOP_VERSION:-latest}
+    build: !reset null
+  worker:
+    image: ghcr.io/eyesonplay/eyesonplay-${EOP_WORKER:-worker-gpu}:${EOP_VERSION:-latest}
+    build: !reset null
