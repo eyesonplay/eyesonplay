@@ -54,7 +54,9 @@ Redis consumer group.
 docker compose up --build
 ```
 
-Open <http://localhost:3000>, click **New match**, paste an HLS URL (for example
+Open <http://localhost:3000> and sign in with the local development account
+**admin@example.com** / **eyesonplay-admin** (set `ADMIN_EMAIL` and
+`ADMIN_PASSWORD` to use your own). Click **New match**, paste an HLS URL (for example
 `https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8`) and press **Create & start
 processing**. The worker runs in `INFERENCE_MODE=mock`: a simulated match (two
 4-4-2 teams, passes, tackles, shots, ball out) is projected through a synthetic
@@ -182,7 +184,11 @@ See [.env.example](.env.example). Main settings:
 | `MEDIA_DIR` | api, worker | `/data/media` | shared uploads volume |
 | `CORS_ORIGINS` | api | `http://localhost:3000` | comma separated |
 | `ALLOW_PRIVATE_SOURCES` | worker | `false` | allow stream URLs on private/loopback hosts (SSRF guard); dev only |
-| `NEXT_PUBLIC_API_URL` | frontend (build) | empty | empty means `<dashboard host>:8000` |
+| `NEXT_PUBLIC_API_URL` | frontend (build) | empty | empty means `<dashboard host>:8000`; `same-origin` behind a reverse proxy |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | api | dev account | first dashboard user, created on startup if missing |
+| `COOKIE_SECURE` | api | `false` | session cookie over HTTPS only; `true` in production |
+| `SESSION_TTL_HOURS` | api | `336` | sign-in lifetime |
+| `FEED_REQUESTS_PER_MINUTE` | api | `120` | integration feed limit per API key |
 
 ## How it works
 
@@ -257,15 +263,27 @@ native real-mode worker against one stack, not both.
 | 5 | Pitch keypoints, automatic homography, mini pitch on real video | automatic per-frame calibration with Roboflow's 32-keypoint pitch model (RANSAC, consecutive-fit confirmation, staleness limit). ~50% of broadcast match frames calibrated; positions approximate (several metres) |
 | 6 | TensorRT/ONNX, multi-match GPU scaling | not started |
 
-**Security:** FFmpeg runs with a protocol whitelist, and stream hosts that resolve to private addresses are refused.
+## Production
 
-**Not in the MVP:** user authentication and authorization for the dashboard
-(put it behind a VPN or an auth proxy before exposing it) and rate limiting. The
-integration feed is protected by API keys.
+[docs/deployment.md](docs/deployment.md) runs EyesOnPlay on one server with
+`docker-compose.prod.yml`: Caddy serves the dashboard and API on one HTTPS
+origin with automatic certificates, the database is backed up nightly, and the
+API and dashboard ports are not exposed. The compose defaults (Postgres
+`football`, the dev admin account) are for local development only; production
+refuses to start until `DOMAIN`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` and
+`POSTGRES_PASSWORD` are set.
 
-**Production:** the compose defaults (Postgres user/password `football`) are for
-local development only. Set `POSTGRES_PASSWORD` and the other values in `.env`
-(see [.env.example](.env.example)) before running anywhere else.
+**Security:**
+- **Dashboard login:** every dashboard route, uploaded video and the live
+  WebSocket require a signed-in user. Passwords are hashed with Argon2id;
+  sessions are random tokens in an HttpOnly, SameSite cookie (HTTPS-only in
+  production), stored hashed and expiring after 14 days. Cross-site requests
+  are refused. Repeated failed sign-ins are rate limited per email and per IP.
+  Manage users with `python -m app.cli` (create, set password, disable, list).
+- **Integration feed:** API keys (shown once, stored hashed, revocable in
+  **Settings → API keys**), rate limited per key.
+- **Video sources:** FFmpeg runs with a protocol whitelist, and stream hosts
+  that resolve to private addresses are refused.
 
 ## Licence
 

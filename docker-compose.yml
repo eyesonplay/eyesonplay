@@ -47,6 +47,11 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-football}:${POSTGRES_PASSWORD:-football}@postgres:5432/${POSTGRES_DB:-football}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-4096}
+      # Dashboard login. Local development defaults; production must set its own
+      # (docker-compose.prod.yml refuses to start without them).
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-eyesonplay-admin}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:

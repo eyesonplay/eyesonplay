@@ -13,10 +13,14 @@ from fastapi import APIRouter, Depends, Header, Query, WebSocket
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from redis.asyncio import Redis
+
+from app.core import rate_limit
 from app.core.api_keys import find_active
-from app.core.errors import UnauthorizedError
+from app.core.config import Settings
+from app.core.errors import TooManyRequestsError, UnauthorizedError
 from app.db.models import ApiKey, Match, MatchStatus
-from app.deps import get_db
+from app.deps import get_app_settings, get_db, get_redis
 from app.routers.ws import serve_feed
 from app.schemas.api_key import FeedMatchOut
 from app.schemas.common import Envelope, ok
@@ -27,14 +31,23 @@ CLOSE_UNAUTHORIZED = 4401
 Db = Annotated[AsyncSession, Depends(get_db)]
 
 
+FEED_WINDOW_S = 60
+
+
 async def require_key(
     db: Db,
+    redis: Annotated[Redis, Depends(get_redis)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
     x_api_key: Annotated[str | None, Header()] = None,
     api_key: Annotated[str | None, Query()] = None,
 ) -> ApiKey:
     row = await find_active(db, x_api_key or api_key)
     if row is None:
         raise UnauthorizedError("A valid API key is required (X-API-Key header)")
+    window_key = f"feed:{row.id}"
+    if await rate_limit.hit(redis, window_key, FEED_WINDOW_S) > settings.feed_requests_per_minute:
+        wait = await rate_limit.retry_after(redis, window_key)
+        raise TooManyRequestsError("Rate limit exceeded for this API key", headers={"Retry-After": str(wait)})
     return row
 
 

@@ -12,6 +12,9 @@ from httpx import ASGITransport, AsyncClient
 from app.core.config import Settings
 from app.main import create_app
 
+ADMIN_EMAIL = "admin@test.local"
+ADMIN_PASSWORD = "correct-horse-battery"
+
 
 @pytest.fixture
 def settings(tmp_path) -> Settings:
@@ -21,6 +24,8 @@ def settings(tmp_path) -> Settings:
         media_dir=tmp_path / "media",
         worker_start_timeout_s=30,
         lost_lease_checks=2,
+        admin_email=ADMIN_EMAIL,
+        admin_password=ADMIN_PASSWORD,
     )
 
 
@@ -40,9 +45,25 @@ async def app(settings, redis):
 
 
 @pytest.fixture
-async def client(app) -> AsyncIterator[AsyncClient]:
+async def anon_client(app) -> AsyncIterator[AsyncClient]:
+    """A client that has not logged in."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
+
+
+@pytest.fixture
+async def client(app) -> AsyncIterator[AsyncClient]:
+    """A client logged in as the bootstrapped admin."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        response = await c.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        assert response.status_code == 200, response.text
+        yield c
+
+
+def login_sync(client) -> None:
+    """Log a starlette TestClient in as the bootstrapped admin."""
+    response = client.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    assert response.status_code == 200, response.text
 
 
 def match_body(**overrides) -> dict:

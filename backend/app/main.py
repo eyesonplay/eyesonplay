@@ -9,9 +9,10 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 import structlog
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from redis.asyncio import Redis
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.background.event_persister import event_handler
 from app.background.status_listener import status_handler
@@ -21,9 +22,11 @@ from app.core.config import Settings, get_settings
 from app.core.errors import install_error_handlers
 from app.core.logging import configure_logging, get_logger
 from app.core.redis_keys import EVENTS_GROUP, EVENTS_STREAM, STATUS_GROUP, STATUS_STREAM
+from app.core.users import bootstrap_admin
 from app.db.base import Base, create_engine, session_factory
 from app.db import models  # noqa: F401 - register tables
-from app.routers import api_keys, events, feed, matches, media, processing, settings, system, uploads, ws
+from app.deps import require_user
+from app.routers import api_keys, auth, events, feed, matches, media, processing, settings, system, uploads, ws
 
 log = get_logger(component="main")
 
@@ -47,6 +50,7 @@ def create_app(
         if create_schema:
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+        await _bootstrap_admin(app, app_settings)
         stop = asyncio.Event()
         tasks = _start_background(app, stop) if background_tasks else []
         log.info("api started", background_tasks=background_tasks)
@@ -69,6 +73,7 @@ def create_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=app_settings.cors_origins,
+        allow_credentials=True,  # the dashboard's session cookie
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["Content-Disposition"],
@@ -90,9 +95,25 @@ def create_app(
                      duration_ms=round((time.perf_counter() - started) * 1000, 1))  # fmt: skip
         return response
 
-    for module in (matches, processing, events, uploads, media, settings, system, ws, api_keys, feed):
-        app.include_router(module.router)
+    # Dashboard routes need a signed-in user; the integration feed uses API keys,
+    # the WebSocket checks the session itself, and liveness stays public.
+    signed_in = [Depends(require_user)]
+    for module in (matches, processing, events, uploads, media, settings, system, api_keys):
+        app.include_router(module.router, dependencies=signed_in)
+    for public in (auth.router, system.public_router, ws.router, feed.router):
+        app.include_router(public)
     return app
+
+
+async def _bootstrap_admin(app: FastAPI, settings: Settings) -> None:
+    password = settings.admin_password.get_secret_value() if settings.admin_password else None
+    if settings.admin_email and not password:
+        log.warning("ADMIN_EMAIL is set without ADMIN_PASSWORD; no admin created")
+    try:
+        async with app.state.session_factory() as db:
+            await bootstrap_admin(db, settings.admin_email, password)
+    except (SQLAlchemyError, ValueError):
+        log.exception("could not create the admin user (are migrations applied?)")
 
 
 def _start_background(app: FastAPI, stop: asyncio.Event) -> list[asyncio.Task[None]]:

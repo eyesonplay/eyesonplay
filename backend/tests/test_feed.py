@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from app.main import create_app
-from conftest import match_body
+from conftest import login_sync, match_body
 
 
 async def create_key(client, name="riosport") -> dict:
@@ -66,6 +66,7 @@ def ws_app(settings):
 
 def test_keyed_websocket_relays_the_match_feed(ws_app):
     with TestClient(ws_app) as client:
+        login_sync(client)
         key = client.post("/api/api-keys", json={"name": "riosport"}).json()["data"]["key"]
         match = client.post("/api/matches", json=match_body()).json()["data"]
         with client.websocket_connect(f"/ws/v1/feed/matches/{match['id']}", headers={"X-API-Key": key}) as ws:
@@ -76,8 +77,18 @@ def test_keyed_websocket_relays_the_match_feed(ws_app):
 
 def test_keyed_websocket_refuses_a_missing_key(ws_app):
     with TestClient(ws_app) as client:
+        login_sync(client)
         match = client.post("/api/matches", json=match_body()).json()["data"]
         with client.websocket_connect(f"/ws/v1/feed/matches/{match['id']}") as ws:
             with pytest.raises(WebSocketDisconnect) as exc:
                 ws.receive_text()
             assert exc.value.code == 4401
+
+
+async def test_feed_is_rate_limited_per_key(client, anon_client, app):
+    app.state.settings.feed_requests_per_minute = 2
+    key = (await create_key(client))["key"]
+
+    statuses = [(await anon_client.get("/api/v1/feed/matches", headers={"X-API-Key": key})).status_code for _ in range(3)]
+
+    assert statuses == [200, 200, 429]

@@ -1,0 +1,25 @@
+# One origin: the API (REST, WebSocket, media, API docs) and the dashboard.
+# Caddy obtains and renews the HTTPS certificate for {$DOMAIN} automatically.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	@api path /api/* /ws/* /media/* /docs /docs/* /redoc /openapi.json
+	handle @api {
+		request_body {
+			max_size 4GB
+		}
+		reverse_proxy api:8000
+	}
+
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

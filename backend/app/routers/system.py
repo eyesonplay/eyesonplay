@@ -20,12 +20,13 @@ from app.services.status_machine import ACTIVE_STATUSES
 from app.services.system_service import gpus, list_workers, models
 
 router = APIRouter(tags=["system"])
+public_router = APIRouter(tags=["system"])  # no login: container health checks
 Db = Annotated[AsyncSession, Depends(get_db)]
 RedisDep = Annotated[Redis, Depends(get_redis)]
 CHECK_TIMEOUT_S = 2.0
 
 
-@router.get("/api/system/live", include_in_schema=False)
+@public_router.get("/api/system/live", include_in_schema=False)
 async def live() -> dict[str, str]:
     return {"status": "ok"}
 

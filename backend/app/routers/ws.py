@@ -19,7 +19,9 @@ from redis.exceptions import RedisError
 
 from app.core.logging import get_logger
 from app.core.redis_keys import LIVE_CHANNELS, channel
+from app.core.sessions import COOKIE_NAME, user_for_token
 from app.db.models import Match
+from app.deps import origin_allowed
 from app.repositories.event_repo import EventRepository
 from app.repositories.match_repo import MatchRepository
 from app.services.realtime import envelope
@@ -29,6 +31,8 @@ router = APIRouter()
 log = get_logger(component="ws")
 
 SNAPSHOT_EVENTS = 50
+CLOSE_UNAUTHORIZED = 4401
+CLOSE_FORBIDDEN = 4403
 CLOSE_NOT_FOUND = 4404
 CLOSE_UNAVAILABLE = 1011
 PUBSUB_POLL_S = 1.0
@@ -36,7 +40,17 @@ PUBSUB_POLL_S = 1.0
 
 @router.websocket("/ws/matches/{match_id}")
 async def match_feed(websocket: WebSocket, match_id: str) -> None:
+    """Dashboard feed: the browser's session cookie, from an allowed origin."""
     await websocket.accept()
+    settings = websocket.app.state.settings
+    if not origin_allowed(websocket.headers.get("origin"), websocket.headers.get("host"), settings):
+        await websocket.close(code=CLOSE_FORBIDDEN, reason="cross-site connection refused")
+        return
+    async with websocket.app.state.session_factory() as db:
+        user = await user_for_token(db, websocket.cookies.get(COOKIE_NAME))
+    if user is None:
+        await websocket.close(code=CLOSE_UNAUTHORIZED, reason="sign in required")
+        return
     await serve_feed(websocket, match_id)
 
 

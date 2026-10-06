@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { ErrorState } from "@/components/common/error-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { ApiKeysSection } from "@/components/settings/api-keys";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -155,6 +156,8 @@ function SettingsForm({ initial }: { initial: AppSettings }) {
             environment variables. See the System page for the device each worker selected.
           </p>
         </section>
+
+        <ApiKeysSection />
       </div>
     </>
   );

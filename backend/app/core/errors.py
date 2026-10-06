@@ -18,15 +18,26 @@ class AppError(Exception):
     status_code = 400
     code = "bad_request"
 
-    def __init__(self, message: str, details: Any = None) -> None:
+    def __init__(self, message: str, details: Any = None, headers: dict[str, str] | None = None) -> None:
         super().__init__(message)
         self.message = message
         self.details = details
+        self.headers = headers
 
 
 class UnauthorizedError(AppError):
     status_code = 401
     code = "unauthorized"
+
+
+class ForbiddenError(AppError):
+    status_code = 403
+    code = "forbidden"
+
+
+class TooManyRequestsError(AppError):
+    status_code = 429
+    code = "too_many_requests"
 
 
 class NotFoundError(AppError):
@@ -56,7 +67,9 @@ def error_body(code: str, message: str, details: Any = None) -> dict[str, Any]:
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def app_error(_: Request, exc: AppError) -> JSONResponse:
-        return JSONResponse(error_body(exc.code, exc.message, exc.details), status_code=exc.status_code)
+        return JSONResponse(
+            error_body(exc.code, exc.message, exc.details), status_code=exc.status_code, headers=exc.headers
+        )
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:

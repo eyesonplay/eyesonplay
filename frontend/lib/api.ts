@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { redirectToLogin } from "@/lib/auth-redirect";
 import { apiBaseUrl } from "@/lib/config";
 import {
   AppSettingsSchema,
@@ -47,6 +48,22 @@ const ErrorEnvelope = z.object({
 
 const meta = z.record(z.string(), z.unknown()).nullable().optional();
 
+export const UserSchema = z.object({ email: z.string() });
+export type User = z.infer<typeof UserSchema>;
+
+export const ApiKeySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  prefix: z.string(),
+  created_at: z.string(),
+  last_used_at: z.string().nullable(),
+  revoked_at: z.string().nullable(),
+});
+export type ApiKey = z.infer<typeof ApiKeySchema>;
+/** Returned once, on creation: the only time the full key is available. */
+export const ApiKeyCreatedSchema = ApiKeySchema.extend({ key: z.string() });
+export type ApiKeyCreated = z.infer<typeof ApiKeyCreatedSchema>;
+
 interface Page<T> {
   data: T;
   meta: Record<string, unknown> | null;
@@ -56,13 +73,19 @@ async function request<S extends z.ZodType>(path: string, schema: S, init?: Requ
   let response: Response;
   try {
     response = await fetch(`${apiBaseUrl()}${path}`, {
+      credentials: "include", // the dashboard session cookie
       ...init,
-      headers: { Accept: "application/json", ...(init?.body ? { "Content-Type": "application/json" } : {}), ...init?.headers },
+      headers: {
+        Accept: "application/json",
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
     });
   } catch {
     throw new ApiError(0, "network_error", "Cannot reach the API. Is the backend running?");
   }
   const body: unknown = await response.json().catch(() => null);
+  if (response.status === 401 && !path.startsWith("/api/auth/")) redirectToLogin();
   if (!response.ok) {
     const parsed = ErrorEnvelope.safeParse(body);
     if (parsed.success) {
@@ -120,8 +143,7 @@ function query(params: Record<string, string | number | string[] | undefined | n
 }
 
 export const api = {
-  listMatches: (params: MatchListParams = {}) =>
-    request(`/api/matches${query({ ...params })}`, z.array(MatchSchema)),
+  listMatches: (params: MatchListParams = {}) => request(`/api/matches${query({ ...params })}`, z.array(MatchSchema)),
   getMatch: async (id: string) => (await request(`/api/matches/${id}`, MatchSchema)).data,
   createMatch: async (input: MatchInput) =>
     (await request("/api/matches", MatchSchema, { method: "POST", ...json(input) })).data,
@@ -149,6 +171,19 @@ export const api = {
   models: async () => (await request("/api/models", z.array(ModelSchema))).data,
   summary: async () => (await request("/api/dashboard/summary", DashboardSummarySchema)).data,
 
+  me: async () => (await request("/api/auth/me", UserSchema)).data,
+  login: async (email: string, password: string) =>
+    (await request("/api/auth/login", UserSchema, { method: "POST", ...json({ email, password }) })).data,
+  logout: async () => {
+    await request("/api/auth/logout", z.null(), { method: "POST" });
+  },
+
+  listApiKeys: async () => (await request("/api/api-keys", z.array(ApiKeySchema))).data,
+  createApiKey: async (name: string) =>
+    (await request("/api/api-keys", ApiKeyCreatedSchema, { method: "POST", ...json({ name }) })).data,
+  revokeApiKey: async (id: string) =>
+    (await request(`/api/api-keys/${id}`, ApiKeySchema, { method: "DELETE" })).data,
+
   getSettings: async () => (await request("/api/settings", AppSettingsSchema)).data,
   saveSettings: async (input: Omit<AppSettings, "updated_at">) =>
     (await request("/api/settings", AppSettingsSchema, { method: "PUT", ...json(input) })).data,
@@ -161,12 +196,14 @@ export function uploadVideo(file: File, onProgress: (fraction: number) => void, 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", `${apiBaseUrl()}/api/uploads`);
+    xhr.withCredentials = true; // the dashboard session cookie
     xhr.responseType = "json";
     xhr.upload.onprogress = (e) => e.lengthComputable && onProgress(e.loaded / e.total);
     xhr.onerror = () => reject(new ApiError(0, "network_error", "Upload failed: cannot reach the API"));
     xhr.onabort = () => reject(new ApiError(0, "aborted", "Upload cancelled"));
     xhr.onload = () => {
       const body: unknown = xhr.response;
+      if (xhr.status === 401) redirectToLogin();
       if (xhr.status >= 200 && xhr.status < 300) {
         const parsed = z.object({ data: UploadSchema }).safeParse(body);
         if (parsed.success) return resolve(parsed.data.data);
