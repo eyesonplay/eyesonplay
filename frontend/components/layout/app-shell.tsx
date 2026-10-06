@@ -14,7 +14,7 @@ function Logo() {
       <span className="grid size-7 place-items-center rounded-md bg-primary/15 ring-1 ring-primary/30">
         <span className="size-2.5 rounded-full bg-primary shadow-[0_0_12px] shadow-primary/60" />
       </span>
-      <span className="text-sm font-semibold tracking-tight">Pitchside Vision</span>
+      <span className="text-sm font-semibold tracking-tight">EyesOnPlay</span>
     </Link>
   );
 }

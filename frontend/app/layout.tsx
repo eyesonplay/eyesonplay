@@ -9,8 +9,8 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: { default: "Pitchside Vision", template: "%s · Pitchside Vision" },
-  description: "Real-time football video analysis: ball tracking, player detection and live event feed.",
+  title: { default: "EyesOnPlay", template: "%s · EyesOnPlay" },
+  description: "Real-time sports video analysis for football and tennis: ball and player tracking, live events and a TV-style mini view.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
