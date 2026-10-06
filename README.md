@@ -1,4 +1,4 @@
-# Pitchside Vision
+# EyesOnPlay
 
 Real-time football video analysis. An admin creates a match, points it at a live
 stream (HLS/RTMP), a video URL or an uploaded file, and starts AI processing. The
