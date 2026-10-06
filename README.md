@@ -1,5 +1,10 @@
 # EyesOnPlay
 
+[![CI](https://github.com/eyesonplay/eyesonplay/actions/workflows/ci.yml/badge.svg)](https://github.com/eyesonplay/eyesonplay/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
+![EyesOnPlay: real-time sports video analysis, football mini pitch and tennis mini court](docs/images/hero.png)
+
 Real-time sports video analysis from a single broadcast camera, for football and
 tennis. An admin creates a match, points it at a live stream (HLS/RTMP), a video
 URL or an uploaded file, and starts AI processing. The dashboard shows the video
@@ -10,6 +15,15 @@ the events through an API-key protected integration feed.
 
 Licensed under the [GNU AGPL-3.0](LICENSE); commercial licences are available
 (see [Licence](#licence)).
+
+| Football: TV-style mini pitch | Tennis: TV-style mini court |
+|---|---|
+| ![Mini pitch: both teams in shirt colours, keepers, referee and the ball](docs/images/mini-pitch.png) | ![Mini court: near and far player, ball arc with shadow and bounce marks](docs/images/mini-court.png) |
+
+The mini views are drawn from the tracking data only: players glide between
+analysed frames, the ball is smoothed, bounces and calls appear as they are
+detected, and the view stays in step with the video. (Images: football from the
+built-in match simulation, tennis from tracking data of a real broadcast.)
 
 ```
 Live / uploaded video ─▶ FFmpeg ─▶ frame sampling ─▶ detector (YOLO | mock)

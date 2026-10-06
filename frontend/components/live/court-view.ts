@@ -27,7 +27,7 @@ export function createProjection(width: number, height: number): Projection {
       [far, left],
     ],
     farWidth: 0.52,
-    marginTop: 0.08, // room for the far player standing behind the baseline
+    marginTop: 0.16, // room for the far player standing well behind the baseline
     marginBottom: 0.02,
     metre: [0, 100 / COURT_W_M],
   });
