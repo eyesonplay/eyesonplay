@@ -61,9 +61,9 @@ def create_app(
             await engine.dispose()
 
     app = FastAPI(
-        title="Football Vision API",
+        title="EyesOnPlay API",
         version="0.1.0",
-        description="Real-time football video analysis: matches, processing control, events and live feed.",
+        description="Real-time sports video analysis (football, tennis): matches, processing control, events and live feed.",
         lifespan=lifespan,
     )
     app.add_middleware(

@@ -1,0 +1,39 @@
+# Changelog
+
+## 0.1.0 — first release
+
+Real-time sports video analysis for football and tennis, from a single
+broadcast camera.
+
+### Platform
+- Matches from live streams (HLS/RTMP), video URLs or uploaded files; start,
+  pause, resume, stop and restart processing from the dashboard.
+- FastAPI REST + WebSocket API, PostgreSQL, Redis streams and pub/sub; a worker
+  that runs in Docker (mock or CPU/GPU) or natively (e.g. Apple MPS).
+- Integration feed for external systems, with API keys and external match links.
+- Live dashboard: video with detection overlay, event feed with filters, JSON
+  inspector, metrics bar; video and mini view side by side, paced to the
+  analysis so both show the same moment.
+
+### Football
+- Ball and player detection (YOLO), Kalman ball tracking, player tracking.
+- Automatic pitch calibration from pitch keypoints, kept while the camera pans.
+- Teams by shirt colour.
+- Events: ball detected/lost/moving, possession, passes, shots, ball out, corners.
+- TV-style animated mini pitch: players in team colours, smoothed ball,
+  corner-flag highlight.
+
+### Tennis
+- Classical court-line calibration, restored on the first wide frame after a
+  close-up.
+- TrackNet ball tracking and bounce detection (model weights not included).
+- Events: serve, hit, bounce (in/out), fault, double fault, ball out, point won.
+- TV-style animated mini court: players, ball arc with shadow, bounce marks,
+  call banners.
+
+### Known limitations
+- Not real time on a laptop GPU for tennis at 25 fps; an NVIDIA GPU is needed
+  for live use.
+- Accuracy has not been benchmarked against hand-labelled matches yet.
+- Tennis model weights from TennisProject carry no licence: personal
+  evaluation only (see [docs/third-party.md](docs/third-party.md)).

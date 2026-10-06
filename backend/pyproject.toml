@@ -1,7 +1,7 @@
 [project]
 name = "football-api"
 version = "0.1.0"
-description = "REST + WebSocket API for real-time football video analysis."
+description = "REST + WebSocket API for EyesOnPlay, real-time sports video analysis."
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.115",

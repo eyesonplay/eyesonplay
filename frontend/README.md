@@ -1,4 +1,4 @@
-# Pitchside Vision — dashboard
+# EyesOnPlay — dashboard
 
 Next.js 16 (App Router) + TypeScript + Tailwind v4 + shadcn/ui (Base UI).
 

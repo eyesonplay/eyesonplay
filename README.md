@@ -1,9 +1,29 @@
 # EyesOnPlay
 
-Real-time football video analysis. An admin creates a match, points it at a live
-stream (HLS/RTMP), a video URL or an uploaded file, and starts AI processing. The
-dashboard shows the video with ball/player overlays, a mini pitch, a live event
-feed and the raw JSON of every event, all streamed over WebSocket.
+[![CI](https://github.com/eyesonplay/eyesonplay/actions/workflows/ci.yml/badge.svg)](https://github.com/eyesonplay/eyesonplay/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
+![EyesOnPlay: real-time sports video analysis, football mini pitch and tennis mini court](docs/images/hero.png)
+
+Real-time sports video analysis from a single broadcast camera, for football and
+tennis. An admin creates a match, points it at a live stream (HLS/RTMP), a video
+URL or an uploaded file, and starts AI processing. The dashboard shows the video
+with ball/player overlays next to a TV-style animated mini pitch or court, a
+live event feed (passes, shots, corners, serves, bounces, points…) and the raw
+JSON of every event, all streamed over WebSocket. External systems can consume
+the events through an API-key protected integration feed.
+
+Licensed under the [GNU AGPL-3.0](LICENSE); commercial licences are available
+(see [Licence](#licence)).
+
+| Football: TV-style mini pitch | Tennis: TV-style mini court |
+|---|---|
+| ![Mini pitch: both teams in shirt colours, keepers, referee and the ball](docs/images/mini-pitch.png) | ![Mini court: near and far player, ball arc with shadow and bounce marks](docs/images/mini-court.png) |
+
+The mini views are drawn from the tracking data only: players glide between
+analysed frames, the ball is smoothed, bounces and calls appear as they are
+detected, and the view stays in step with the video. (Images: football from the
+built-in match simulation, tennis from tracking data of a real broadcast.)
 
 ```
 Live / uploaded video ─▶ FFmpeg ─▶ frame sampling ─▶ detector (YOLO | mock)
@@ -44,7 +64,7 @@ video's content.
 
 ### Pitch calibration (mini pitch on real video)
 
-Install the pitch keypoint model (Roboflow `sports`, MIT) into the models folder:
+Install the pitch keypoint model (Roboflow `sports`; code MIT, check the weights' terms in [docs/third-party.md](docs/third-party.md)) into the models folder:
 
 ```bash
 pip install gdown
@@ -59,6 +79,10 @@ follows the ball (up to 8 s without landmarks; a cut ends it). Frames with too
 little grass in view (graphics, close-ups, crowd) drop the calibration at once.
 Uncalibrated frames stay in pixel coordinates; the mini pitch keeps the last
 positions faded for up to 15 s and otherwise says why.
+
+Football events: ball detected/lost/moving, possession and possession change,
+passes, shots, ball out and **corners** (the ball settles in a corner arc with a
+player next to it).
 
 **Teams** are separated by shirt colour (two-cluster k-means over torso colours,
 labels kept stable, majority vote per track). The mini pitch and video overlay
@@ -171,8 +195,8 @@ See [.env.example](.env.example). Main settings:
   single noisy frame never changes it. Passes require a release, minimum travel
   and a different receiver. Shots are `shot_candidate` unless confidence passes
   the configured threshold, and without pitch calibration they are capped at low
-  confidence and never promoted. Teams and player names are always `null` (there
-  is no identity model).
+  confidence and never promoted. Teams are A/B by shirt colour; player names are
+  always `null` (there is no identity model).
 
 Details: [docs/redis-contract.md](docs/redis-contract.md) ·
 [docs/event-schema.md](docs/event-schema.md) · OpenAPI at `/docs`.
@@ -201,9 +225,17 @@ WebSocket and dashboard:
   mostly static); full searches run on a background thread. On a 1080p
   Beijing broadcast: court calibrated in 66% of frames (the rest are
   close-ups/replays), both players picked out of the crowd/officials in 86%.
-- **Real video, ball (T3, pending):** generic detectors and colour+motion do
-  not find the tennis ball at broadcast distance (measured ~0%); a dedicated
-  tennis-ball model (e.g. TrackNet) is needed before real tennis events work.
+- **Real video, ball:** a TrackNet ball tracker (3-frame heatmap network) and a
+  CatBoost bounce classifier. On the same broadcast at 25 fps: ball found in
+  71% of frames, court calibrated in 88% (the court is restored on the first
+  wide frame after a close-up). 25 fps is needed: at 12 fps most bounces are
+  lost. On an Apple laptop GPU this runs ~3x slower than real time; use an
+  NVIDIA GPU for live matches.
+- **Tennis model weights are not included** and their published source carries
+  no licence: for personal evaluation, `tracknet_ball.pt` and
+  `tennis_bounce.cbm` from [TennisProject](https://github.com/yastrebksv/TennisProject)
+  go into the models folder. Without the bounce model a built-in rule is used.
+  See [docs/third-party.md](docs/third-party.md).
 
 A worker takes any queued job, so run either the mock worker (Docker) or the
 native real-mode worker against one stack, not both.
@@ -221,5 +253,27 @@ native real-mode worker against one stack, not both.
 
 **Security:** FFmpeg runs with a protocol whitelist, and stream hosts that resolve to private addresses are refused.
 
-**Not in the MVP:** authentication and authorization (put the dashboard behind
-a VPN or an auth proxy before exposing it) and rate limiting.
+**Not in the MVP:** user authentication and authorization for the dashboard
+(put it behind a VPN or an auth proxy before exposing it) and rate limiting. The
+integration feed is protected by API keys.
+
+**Production:** the compose defaults (Postgres user/password `football`) are for
+local development only. Set `POSTGRES_PASSWORD` and the other values in `.env`
+(see [.env.example](.env.example)) before running anywhere else.
+
+## Licence
+
+EyesOnPlay is free software under the [GNU Affero General Public License v3.0](LICENSE).
+If you run a modified version as a network service, the AGPL requires you to
+offer its source to the service's users.
+
+**Commercial licences** (for closed-source products or services, without the
+AGPL obligations) are available from the maintainers: open an issue or contact
+us through [github.com/eyesonplay](https://github.com/eyesonplay).
+
+Third-party software and models keep their own licences; model weights are not
+distributed here. Notably YOLO (Ultralytics) is AGPL-3.0 and the tennis weights
+carry no licence. See [docs/third-party.md](docs/third-party.md).
+
+Contributions: see [CONTRIBUTING.md](CONTRIBUTING.md). Changes:
+[CHANGELOG.md](CHANGELOG.md).
