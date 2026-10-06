@@ -1,0 +1,69 @@
+name: Website
+
+# Builds the website (website/, with docs/ synced in) on pull requests and
+# publishes it to GitHub Pages from main. Set the repository variable
+# PAGES_DOMAIN (e.g. eyesonplay.com) once DNS points at GitHub Pages; until
+# then the site is served at https://<owner>.github.io/<repo>/.
+on:
+  push:
+    branches: [main]
+    paths: ["website/**", "docs/**", ".github/workflows/pages.yml"]
+  pull_request:
+    paths: ["website/**", "docs/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: website/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: website/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - name: Site address
+        env:
+          DOMAIN: ${{ vars.PAGES_DOMAIN }}
+        run: |
+          if [ -n "$DOMAIN" ]; then
+            echo "SITE_URL=https://$DOMAIN" >> "$GITHUB_ENV"
+            echo "BASE_PATH=/" >> "$GITHUB_ENV"
+            echo "$DOMAIN" > public/CNAME
+          else
+            echo "SITE_URL=https://${{ github.repository_owner }}.github.io" >> "$GITHUB_ENV"
+            echo "BASE_PATH=/${{ github.event.repository.name }}" >> "$GITHUB_ENV"
+          fi
+      - run: pnpm build
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

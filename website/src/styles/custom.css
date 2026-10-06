@@ -1,0 +1,28 @@
+/* EyesOnPlay brand: pitch green with a ball-yellow accent. */
+:root {
+  --sl-color-accent-low: #0f2e1b;
+  --sl-color-accent: #22c55e;
+  --sl-color-accent-high: #bbf7d0;
+  --sl-font: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="light"] {
+  --sl-color-accent-low: #dcfce7;
+  --sl-color-accent: #15803d;
+  --sl-color-accent-high: #14532d;
+}
+.hero h1 { letter-spacing: -0.03em; }
+.hero h1 .accent { color: #fde047; }
+
+.demo {
+  margin: 1.5rem 0 2rem;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.demo video { display: block; width: 100%; height: auto; }
+
+.pipeline {
+  font-family: var(--__sl-font-mono, ui-monospace, monospace);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}

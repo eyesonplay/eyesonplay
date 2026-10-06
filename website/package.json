@@ -1,0 +1,19 @@
+{
+  "name": "eyesonplay-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "sync-docs": "node scripts/sync-docs.mjs",
+    "dev": "node scripts/sync-docs.mjs && astro dev",
+    "build": "node scripts/sync-docs.mjs && astro build",
+    "preview": "astro preview"
+  },
+  "packageManager": "pnpm@10.30.2",
+  "dependencies": {
+    "@astrojs/starlight": "0.42.5",
+    "astro": "7.3.6",
+    "sharp": "^0.35.5"
+  }
+}

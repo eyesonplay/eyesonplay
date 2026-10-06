@@ -1,0 +1,72 @@
+---
+title: EyesOnPlay
+description: Open-source real-time sports video analysis for football and tennis from a single broadcast camera.
+template: splash
+hero:
+  title: 'Eyes<span class="accent">On</span>Play'
+  tagline: Real-time sports video analysis from a single broadcast camera. Players, ball, events and a live TV-style mini view, for football and tennis. Open source.
+  actions:
+    - text: Get started
+      link: getting-started/
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/eyesonplay/eyesonplay
+      icon: github
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+import { Image } from "astro:assets";
+import tennis from "../../assets/docs/dashboard-tennis.png";
+import football from "../../assets/docs/dashboard-football.png";
+
+<div class="demo">
+  <video src="demo.mp4" poster="demo-poster.png" autoplay muted loop playsinline aria-label="The mini pitch and mini court animating from tracking data"></video>
+</div>
+
+## What it does
+
+<CardGrid>
+  <Card title="Watches the video" icon="seti:video">
+    Point it at a live stream (HLS, RTMP), a video URL or an upload. It finds the players and the ball in every
+    frame, tracks them, and maps them onto the pitch or court as the camera pans.
+  </Card>
+  <Card title="Calls the events" icon="list-format">
+    Football: possession, passes, shots, ball out, corners. Tennis: serves, hits, bounces in or out, faults and who
+    won the point. Every event is JSON with a confidence.
+  </Card>
+  <Card title="Shows it live" icon="laptop">
+    The dashboard plays the video with detections drawn on it, next to an animated TV-style mini pitch or court,
+    with a live event feed, all over WebSocket.
+  </Card>
+  <Card title="Feeds your systems" icon="rocket">
+    An API-key protected feed streams matches and events to betting, media or club platforms in real time.
+  </Card>
+</CardGrid>
+
+## The live dashboard
+
+<Image src={tennis} alt="Tennis live page: broadcast with detections, mini court, events and JSON" />
+
+<Image src={football} alt="Football live page: broadcast with detections, calibrated mini pitch, events and JSON" />
+
+## How it works
+
+<div class="pipeline">
+Video ─▶ FFmpeg ─▶ detection (YOLO, TrackNet) ─▶ ball + player tracking ─▶ pitch/court calibration
+     ─▶ event engine ─▶ Redis ─▶ API + WebSocket ─▶ dashboard and integration feed
+</div>
+
+One camera, no stadium installation. Calibration comes from the lines on the pitch or court, so it works on
+ordinary broadcast footage. Nothing is invented: when the camera shows a close-up, positions are marked
+unknown instead of guessed. [Read more](guides/how-it-works/).
+
+## Get going
+
+<CardGrid>
+  <LinkCard title="Try it in 2 minutes" description="docker compose up: a simulated match, no GPU needed." href="getting-started/" />
+  <LinkCard title="Deploy to production" description="HTTPS, sign-in, GPU worker and backups on one server." href="reference/deployment/" />
+  <LinkCard title="Integrate" description="Read matches and live events with an API key." href="reference/integration-feed/" />
+  <LinkCard title="Commercial licence" description="Closed-source or SaaS use without the AGPL obligations." href="guides/licensing/" />
+</CardGrid>
