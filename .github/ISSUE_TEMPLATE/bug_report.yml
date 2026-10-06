@@ -1,0 +1,38 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Steps, sport, source type (stream, URL, upload) and processing settings.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Relevant API or worker log lines (remove anything private).
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: "0.1.0 or commit hash"
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Inference device
+      options: [Mock mode, CPU, NVIDIA GPU, Apple MPS]
+    validations:
+      required: true
