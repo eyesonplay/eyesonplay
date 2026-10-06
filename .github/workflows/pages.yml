@@ -1,9 +1,10 @@
 name: Website
 
 # Builds the website (website/, with docs/ synced in) on pull requests and
-# publishes it to GitHub Pages from main. Set the repository variable
-# PAGES_DOMAIN (e.g. eyesonplay.com) once DNS points at GitHub Pages; until
-# then the site is served at https://<owner>.github.io/<repo>/.
+# publishes it to GitHub Pages from main once the repository variable
+# PAGES_ENABLED is "true" (after enabling Pages: Settings → Pages → Source:
+# GitHub Actions). Set PAGES_DOMAIN (e.g. eyesonplay.com) once DNS points at
+# GitHub Pages; until then the site is served at https://<owner>.github.io/<repo>/.
 on:
   push:
     branches: [main]
@@ -49,13 +50,13 @@ jobs:
             echo "BASE_PATH=/${{ github.event.repository.name }}" >> "$GITHUB_ENV"
           fi
       - run: pnpm build
-      - if: github.event_name != 'pull_request'
+      - if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: website/dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && vars.PAGES_ENABLED == 'true'
     needs: build
     runs-on: ubuntu-latest
     permissions:
