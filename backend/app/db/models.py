@@ -1,4 +1,4 @@
-"""ORM models: Match, Event, ProcessingSession, AppSettings."""
+"""ORM models: Match, Event, ProcessingSession, AppSettings, ApiKey."""
 
 from __future__ import annotations
 
@@ -82,6 +82,8 @@ class Match(Base):
     enable_player_tracking: Mapped[bool] = mapped_column(Boolean, default=True)
     enable_pitch_mapping: Mapped[bool] = mapped_column(Boolean, default=True)
     kickoff_offset_seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    # The same match in another app (e.g. "riosport:1557417"), for integrations.
+    external_ref: Mapped[str | None] = mapped_column(String(80), index=True)
     current_session_id: Mapped[str | None] = mapped_column(String(40))
     event_count: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -138,3 +140,17 @@ class AppSettings(Base):
     default_enable_player_tracking: Mapped[bool] = mapped_column(Boolean, default=True)
     default_enable_pitch_mapping: Mapped[bool] = mapped_column(Boolean, default=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ApiKey(Base):
+    """A key another app uses for the integration feed. Only its SHA-256 is stored."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True)
+    name: Mapped[str] = mapped_column(String(120))
+    prefix: Mapped[str] = mapped_column(String(16))
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

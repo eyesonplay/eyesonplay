@@ -24,6 +24,11 @@ class AppError(Exception):
         self.details = details
 
 
+class UnauthorizedError(AppError):
+    status_code = 401
+    code = "unauthorized"
+
+
 class NotFoundError(AppError):
     status_code = 404
     code = "not_found"

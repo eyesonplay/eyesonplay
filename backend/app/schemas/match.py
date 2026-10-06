@@ -16,6 +16,7 @@ Team = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max
 ModelName = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9._-]{1,120}$")]
 Confidence = Annotated[float, Field(ge=0.05, le=0.99)]
 KickoffOffset = Annotated[float, Field(ge=0, le=3 * 3600)]
+ExternalRef = Annotated[str, StringConstraints(strip_whitespace=True, pattern=r"^[A-Za-z0-9._:-]{1,80}$")]
 
 _UPLOAD_RE = re.compile(r"^uploads/[a-z0-9]{26}\.(mp4|mov|mkv|webm)$")
 _SCHEMES: dict[SourceType, tuple[str, ...]] = {
@@ -64,6 +65,7 @@ class MatchCreate(_SourceFields):
     enable_player_tracking: bool | None = None
     enable_pitch_mapping: bool | None = None
     kickoff_offset_seconds: KickoffOffset = 0.0
+    external_ref: ExternalRef | None = None
 
     @model_validator(mode="after")
     def _check_source(self) -> MatchCreate:
@@ -88,6 +90,7 @@ class MatchUpdate(_SourceFields):
     enable_player_tracking: bool | None = None
     enable_pitch_mapping: bool | None = None
     kickoff_offset_seconds: KickoffOffset | None = None
+    external_ref: ExternalRef | None = None
 
     @model_validator(mode="after")
     def _check_source(self) -> MatchUpdate:
@@ -127,6 +130,7 @@ class MatchOut(BaseModel):
     enable_player_tracking: bool
     enable_pitch_mapping: bool
     kickoff_offset_seconds: float
+    external_ref: str | None = None
     current_session_id: str | None
     event_count: int
     created_at: datetime

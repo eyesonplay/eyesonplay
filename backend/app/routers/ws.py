@@ -37,6 +37,11 @@ PUBSUB_POLL_S = 1.0
 @router.websocket("/ws/matches/{match_id}")
 async def match_feed(websocket: WebSocket, match_id: str) -> None:
     await websocket.accept()
+    await serve_feed(websocket, match_id)
+
+
+async def serve_feed(websocket: WebSocket, match_id: str) -> None:
+    """Snapshot, then live messages, on an accepted socket (dashboard and integration feed)."""
     redis: Redis = websocket.app.state.redis
     async with websocket.app.state.session_factory() as db:
         match = await MatchRepository(db).get(match_id)

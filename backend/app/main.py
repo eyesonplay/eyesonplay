@@ -23,7 +23,7 @@ from app.core.logging import configure_logging, get_logger
 from app.core.redis_keys import EVENTS_GROUP, EVENTS_STREAM, STATUS_GROUP, STATUS_STREAM
 from app.db.base import Base, create_engine, session_factory
 from app.db import models  # noqa: F401 - register tables
-from app.routers import events, matches, media, processing, settings, system, uploads, ws
+from app.routers import api_keys, events, feed, matches, media, processing, settings, system, uploads, ws
 
 log = get_logger(component="main")
 
@@ -90,7 +90,7 @@ def create_app(
                      duration_ms=round((time.perf_counter() - started) * 1000, 1))  # fmt: skip
         return response
 
-    for module in (matches, processing, events, uploads, media, settings, system, ws):
+    for module in (matches, processing, events, uploads, media, settings, system, ws, api_keys, feed):
         app.include_router(module.router)
     return app
 

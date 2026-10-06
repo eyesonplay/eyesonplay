@@ -62,6 +62,7 @@ async def create_match(body: MatchCreate, db: Db, redis: RedisDep) -> Envelope[M
         enable_player_tracking=_or(body.enable_player_tracking, defaults.default_enable_player_tracking),
         enable_pitch_mapping=_or(body.enable_pitch_mapping, defaults.default_enable_pitch_mapping),
         kickoff_offset_seconds=body.kickoff_offset_seconds,
+        external_ref=body.external_ref,
         event_count=0,
     )
     match.status = idle_status(match)
