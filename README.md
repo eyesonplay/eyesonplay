@@ -20,6 +20,12 @@ Licensed under the [GNU AGPL-3.0](LICENSE); commercial licences are available
 |---|---|
 | ![Mini pitch: both teams in shirt colours, keepers, referee and the ball](docs/images/mini-pitch.png) | ![Mini court: near and far player, ball arc with shadow and bounce marks](docs/images/mini-court.png) |
 
+**Live dashboard** (video with detection overlay, mini view, event feed, JSON
+inspector and live metrics; broadcast footage blurred in these screenshots):
+
+![Tennis live page: video, mini court, serve/hit/bounce/point events and JSON](docs/images/dashboard-tennis.png)
+![Football live page: video, calibrated mini pitch with both teams, events and JSON](docs/images/dashboard-football.png)
+
 The mini views are drawn from the tracking data only: players glide between
 analysed frames, the ball is smoothed, bounces and calls appear as they are
 detected, and the view stays in step with the video. (Images: football from the
