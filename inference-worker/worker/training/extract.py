@@ -25,7 +25,7 @@ from worker.pipeline import FramePipeline
 
 log = get_logger(component="training")
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2
 PROGRESS_EVERY_S = 30.0  # video seconds between progress lines
 
 
@@ -47,7 +47,10 @@ class _Recorder:
         return []
 
 
-def record(video: Path, settings: WorkerSettings, device: str, fps: int, player_model: str) -> Recording:
+def record(
+    video: Path, settings: WorkerSettings, device: str, fps: int, player_model: str, *, until_s: float | None
+) -> Recording:
+    """Observations up to `until_s` of video (all of it when None)."""
     from worker.detect.registry import components_for_file
 
     config = MatchConfig(
@@ -65,6 +68,8 @@ def record(video: Path, settings: WorkerSettings, device: str, fps: int, player_
     started, next_report = time.monotonic(), PROGRESS_EVERY_S
     try:
         for frame in components.source:
+            if until_s is not None and frame.video_ts > until_s:
+                break
             pipeline.process(frame)
             if frame.video_ts >= next_report:
                 next_report += PROGRESS_EVERY_S
@@ -76,14 +81,20 @@ def record(video: Path, settings: WorkerSettings, device: str, fps: int, player_
 
 
 def cached_record(
-    video: Path, cache_dir: Path, settings: WorkerSettings, device: str, fps: int, player_model: str
+    video: Path,
+    cache_dir: Path,
+    settings: WorkerSettings,
+    device: str,
+    fps: int,
+    player_model: str,
+    until_s: float | None = None,
 ) -> Recording:
-    path = cache_dir / f"{video.stem}-{_cache_key(video, fps, player_model)}.pkl"
+    path = cache_dir / f"{video.stem}-{_cache_key(video, fps, player_model, until_s)}.pkl"
     if path.is_file():
         log.info("using recorded detections", video=video.name, cache=str(path))
         with path.open("rb") as fh:
             return pickle.load(fh)  # our own cache file
-    recording = record(video, settings, device, fps, player_model)
+    recording = record(video, settings, device, fps, player_model, until_s=until_s)
     cache_dir.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     with tmp.open("wb") as fh:
@@ -92,7 +103,7 @@ def cached_record(
     return recording
 
 
-def _cache_key(video: Path, fps: int, player_model: str) -> str:
+def _cache_key(video: Path, fps: int, player_model: str, until_s: float | None) -> str:
     stat = video.stat()
-    raw = f"{CACHE_VERSION}|{video.resolve()}|{stat.st_size}|{stat.st_mtime_ns}|{fps}|{player_model}"
+    raw = f"{CACHE_VERSION}|{video.resolve()}|{stat.st_size}|{stat.st_mtime_ns}|{fps}|{player_model}|{until_s}"
     return hashlib.sha1(raw.encode()).hexdigest()[:12]

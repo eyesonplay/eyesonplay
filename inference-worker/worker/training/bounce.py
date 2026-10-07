@@ -35,7 +35,15 @@ from worker.detect.bounce_model import (
     load_bounce_scorer,
 )
 from worker.device import select_device
-from worker.training.dataset import Window, ball_windows, bounce_times, in_span, label_windows, split_point
+from worker.training.dataset import (
+    Window,
+    ball_windows,
+    bounce_times,
+    in_span,
+    label_windows,
+    labelled_until,
+    split_point,
+)
 from worker.training.evaluate import replay, score_span
 from worker.training.extract import Recording, cached_record
 from worker.training.model import TrainedBounceModel, predict, train_bounce_model
@@ -43,6 +51,7 @@ from worker.training.model import TrainedBounceModel, predict, train_bounce_mode
 DEFAULT_CACHE = Path.home() / ".pitchside" / "training"
 DEFAULT_MODELS = Path.home() / ".pitchside" / "models"
 RULES = "rules"
+RECORD_MARGIN_S = 2.0  # recorded past the last label, so its window is complete
 SCORED_FIELDS = ("true_positives", "false_positives", "false_negatives")
 
 Results = dict[str, dict[str, dict[str, float]]]  # detector -> event type -> counts and scores
@@ -94,7 +103,16 @@ def _load(video: Path, labels_path: Path, args: argparse.Namespace) -> LabelledV
     if not bounce_times(labels, 0.0, float("inf")):
         raise ValueError(f"{labels_path} has no bounce labels")
     settings = WorkerSettings(inference_mode="real", models_dir=args.models_dir, media_dir=video.parent)
-    recording = cached_record(video, args.cache_dir, settings, select_device("real"), args.fps, args.player_model)
+    until_s = labelled_until(labels) + RECORD_MARGIN_S
+    duplicates = sum(1 for e in labels["events"] if e["event"] == "bounce") - len(bounce_times(labels, 0.0, until_s))
+    print(
+        f"{labels_path.name}: {len(bounce_times(labels, 0.0, until_s))} bounces until {until_s - RECORD_MARGIN_S:.0f} s",
+        end="",
+    )
+    print(f" ({duplicates} labelled twice, merged)" if duplicates else "")
+    recording = cached_record(
+        video, args.cache_dir, settings, select_device("real"), args.fps, args.player_model, until_s=until_s
+    )
     return LabelledVideo(video, labels, recording, split_point(labels, args.held_out))
 
 

@@ -116,7 +116,7 @@ def test_cli_trains_evaluates_and_saves(tmp_path, monkeypatch, capsys):
     times = [k * PERIOD_S for k in range(1, 50)]
     labels.write_text(json.dumps({"sport": "tennis", "events": [{"t": t, "event": "bounce"} for t in times]}))
     recording = Recording(720, FPS, tuple(bouncing(40.0, noise=1.5)))
-    monkeypatch.setattr(bounce, "cached_record", lambda *args: recording)
+    monkeypatch.setattr(bounce, "cached_record", lambda *args, **kwargs: recording)
     monkeypatch.setattr(bounce, "select_device", lambda mode: "cpu")
     out = tmp_path / "out"
 
@@ -148,7 +148,7 @@ def test_a_video_is_recorded_once_then_read_from_the_cache(tmp_path, monkeypatch
     video.write_bytes(b"x")
     calls = []
 
-    def fake_record(*args):
+    def fake_record(*args, until_s):
         calls.append(args)
         return extract.Recording(720, FPS, tuple(bouncing(1.0)))
 
@@ -159,3 +159,27 @@ def test_a_video_is_recorded_once_then_read_from_the_cache(tmp_path, monkeypatch
 
     assert len(calls) == 1
     assert second == first
+
+
+def test_a_bounce_labelled_twice_counts_once():
+    labels = {"events": [{"t": t, "event": "bounce"} for t in (19.39, 19.39, 20.62, 20.71, 23.09, 23.41, 30.0)]}
+
+    times = bounce_times(labels, 0, 100)
+
+    assert times == pytest.approx([19.39, 20.665, 23.25, 30.0])
+
+
+def test_recording_stops_after_the_labelled_span(tmp_path, monkeypatch):
+    from worker.training import extract
+
+    video = tmp_path / "match.mp4"
+    video.write_bytes(b"x")
+    seen = []
+    monkeypatch.setattr(
+        extract, "record", lambda *args, until_s: seen.append(until_s) or extract.Recording(720, FPS, ())
+    )
+
+    extract.cached_record(video, tmp_path / "cache", None, "cpu", FPS, "yolov8n", until_s=60.0)
+    extract.cached_record(video, tmp_path / "cache", None, "cpu", FPS, "yolov8n", until_s=90.0)
+
+    assert seen == [60.0, 90.0]  # a longer span is recorded again

@@ -19,6 +19,7 @@ from tennis_events.trajectory import MAX_GAP_S, WINDOW
 
 SCORER_HEIGHT_PX = 720.0
 POSITIVE_TOLERANCE_S = 0.12  # a label this close to a window centre marks that window
+DUPLICATE_GAP_S = 0.4  # a ball cannot bounce twice this quickly: closer labels are one bounce
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,7 +62,17 @@ def label_windows(
 
 
 def bounce_times(labels: dict[str, Any], start: float, end: float) -> list[float]:
-    return [float(e["t"]) for e in labels["events"] if e["event"] == "bounce" and start <= e["t"] < end]
+    """Labelled bounces in [start, end); a bounce labelled twice (a double key
+    press, a second pass) counts once, at the mean of its labels."""
+    times = sorted(float(e["t"]) for e in labels["events"] if e["event"] == "bounce")
+    groups: list[list[float]] = []
+    for t in times:
+        if groups and t - groups[-1][-1] < DUPLICATE_GAP_S:
+            groups[-1].append(t)
+        else:
+            groups.append([t])
+    merged = [sum(g) / len(g) for g in groups]
+    return [t for t in merged if start <= t < end]
 
 
 def labelled_until(labels: dict[str, Any]) -> float:
