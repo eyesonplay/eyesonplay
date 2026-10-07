@@ -1,18 +1,18 @@
 FROM node:26-alpine AS deps
 WORKDIR /app
-RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+# Node 25+ no longer ships corepack: install the pnpm version package.json pins.
+RUN npm install -g "$(node -p "require('./package.json').packageManager")" \
+    && pnpm install --frozen-lockfile
 
 FROM node:26-alpine AS build
 WORKDIR /app
-RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Optional: bake a fixed API URL; by default the browser uses <current host>:8000.
 ARG NEXT_PUBLIC_API_URL=""
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL NEXT_TELEMETRY_DISABLED=1
-RUN pnpm build
+RUN npm run build
 
 FROM node:26-alpine AS runtime
 WORKDIR /app
