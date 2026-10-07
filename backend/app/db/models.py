@@ -179,3 +179,14 @@ class UserSession(Base):
     token_hash: Mapped[str] = mapped_column(String(64), unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+
+class MatchLabels(Base):
+    """Hand-labelled ground truth for a match (benchmark and training data)."""
+
+    __tablename__ = "match_labels"
+
+    match_id: Mapped[str] = mapped_column(ForeignKey("matches.id", ondelete="CASCADE"), primary_key=True)
+    events: Mapped[list[dict[str, Any]]] = mapped_column(JsonType, default=list)
+    labelled_until_s: Mapped[float | None] = mapped_column(Float)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

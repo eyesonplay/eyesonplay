@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { redirectToLogin } from "@/lib/auth-redirect";
 import { apiBaseUrl } from "@/lib/config";
+import type { Label } from "@/lib/labelling";
 import {
   AppSettingsSchema,
   DashboardSummarySchema,
@@ -61,6 +62,13 @@ export const ApiKeySchema = z.object({
 });
 export type ApiKey = z.infer<typeof ApiKeySchema>;
 /** Returned once, on creation: the only time the full key is available. */
+export const LabelsSchema = z.object({
+  events: z.array(z.looseObject({ t: z.number(), event: z.string() })),
+  labelled_until_s: z.number().nullable(),
+  updated_at: z.string().nullable(),
+});
+export type MatchLabels = { events: Label[]; labelled_until_s: number | null; updated_at: string | null };
+
 export const ApiKeyCreatedSchema = ApiKeySchema.extend({ key: z.string() });
 export type ApiKeyCreated = z.infer<typeof ApiKeyCreatedSchema>;
 
@@ -178,11 +186,15 @@ export const api = {
     await request("/api/auth/logout", z.null(), { method: "POST" });
   },
 
+  getLabels: async (id: string) => (await request(`/api/matches/${id}/labels`, LabelsSchema)).data as MatchLabels,
+  saveLabels: async (id: string, input: { events: Label[]; labelled_until_s: number | null }) =>
+    (await request(`/api/matches/${id}/labels`, LabelsSchema, { method: "PUT", ...json(input) })).data as MatchLabels,
+  labelsExportUrl: (id: string) => `${apiBaseUrl()}/api/matches/${id}/labels/export`,
+
   listApiKeys: async () => (await request("/api/api-keys", z.array(ApiKeySchema))).data,
   createApiKey: async (name: string) =>
     (await request("/api/api-keys", ApiKeyCreatedSchema, { method: "POST", ...json({ name }) })).data,
-  revokeApiKey: async (id: string) =>
-    (await request(`/api/api-keys/${id}`, ApiKeySchema, { method: "DELETE" })).data,
+  revokeApiKey: async (id: string) => (await request(`/api/api-keys/${id}`, ApiKeySchema, { method: "DELETE" })).data,
 
   getSettings: async () => (await request("/api/settings", AppSettingsSchema)).data,
   saveSettings: async (input: Omit<AppSettings, "updated_at">) =>

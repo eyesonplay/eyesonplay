@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
+from sqlalchemy import delete as sa_delete
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import NotFoundError
-from app.db.models import Match, MatchStatus
+from app.db.models import Match, MatchLabels, MatchStatus
 
 
 class MatchRepository:
@@ -64,4 +65,6 @@ class MatchRepository:
         self._s.add(match)
 
     async def delete(self, match: Match) -> None:
+        # Postgres cascades this; deleting explicitly keeps SQLite (dev, tests) consistent.
+        await self._s.execute(sa_delete(MatchLabels).where(MatchLabels.match_id == match.id))
         await self._s.delete(match)

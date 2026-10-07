@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil } from "lucide-react";
+import { Pencil, Tags } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -99,6 +99,9 @@ function LiveView({ match }: { match: Match }) {
         </div>
         <div className="flex items-center gap-1.5">
           <ProcessingControls matchId={match.id} status={status} hasSource={!!match.video_source} />
+          <Button size="sm" variant="ghost" nativeButton={false} render={<Link href={`/matches/${match.id}/label`} />}>
+            <Tags /> Label
+          </Button>
           <Button
             size="sm"
             variant="ghost"
