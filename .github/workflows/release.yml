@@ -44,7 +44,7 @@ jobs:
             target: gpu
             platforms: linux/amd64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Free disk space for the CUDA image
         if: matrix.name == 'worker-gpu'
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h /
@@ -85,7 +85,7 @@ jobs:
     needs: images
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Release notes from CHANGELOG.md
         run: |
           version="${GITHUB_REF_NAME#v}"
