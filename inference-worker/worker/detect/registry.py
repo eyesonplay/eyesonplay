@@ -90,8 +90,20 @@ def _mock_tennis_components(config: MatchConfig, settings: WorkerSettings) -> Co
     return Components(source, detector, mapper)
 
 
+def components_for_file(path: Path, config: MatchConfig, settings: WorkerSettings, device: str) -> Components:
+    """The real analysis components for a local video file, read as fast as
+    possible (offline work such as training data), exactly as a match runs."""
+    return _real_components(config, settings, device, None, url=str(path), realtime=False)
+
+
 def _real_components(
-    config: MatchConfig, settings: WorkerSettings, device: str, on_reconnect: ReconnectCallback
+    config: MatchConfig,
+    settings: WorkerSettings,
+    device: str,
+    on_reconnect: ReconnectCallback | None,
+    *,
+    url: str | None = None,
+    realtime: bool = True,
 ) -> Components:
     from worker.detect.yolo_detector import load_yolo_detector
     from worker.ingest.ffmpeg_source import FFmpegSource
@@ -109,11 +121,12 @@ def _real_components(
 
         scoreboard = load_scoreboard_reader()
     source = FFmpegSource(
-        url=resolve_source(config, settings.media_dir),
+        url=url or resolve_source(config, settings.media_dir),
         fps=config.processing_fps,
         is_live=config.is_live,
         settings=settings,
         on_reconnect=on_reconnect,
+        realtime=realtime,
     )
     return Components(source, detector, mapper, scoreboard)
 
@@ -151,4 +164,11 @@ def resolve_source(config: MatchConfig, media_dir: Path) -> str:
     return str(path)
 
 
-__all__ = ["DETECTOR_FAMILIES", "Components", "ModelLoadError", "build_components", "pitch_mapping_enabled"]
+__all__ = [
+    "DETECTOR_FAMILIES",
+    "Components",
+    "ModelLoadError",
+    "build_components",
+    "components_for_file",
+    "pitch_mapping_enabled",
+]

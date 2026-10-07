@@ -22,6 +22,8 @@ The TrackNet and bounce weights published by
 [TennisProject](https://github.com/yastrebksv/TennisProject) carry no licence:
 use them for personal evaluation only. See
 [Third-party software and models](../../reference/third-party/).
+To replace the bounce model with your own, label bounces on the dashboard and
+train one: see [Training your own tennis bounce model](../../reference/training/).
 
 ## Scoring logic
 

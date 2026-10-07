@@ -18,6 +18,7 @@ No model weights are committed. The worker loads them from `MODELS_DIR`
 | `football-player-detection.pt`, `football-ball-detection.pt`, `football-pitch-detection.pt` | Football players/ball, pitch keypoints | [roboflow/sports](https://github.com/roboflow/sports) | Code MIT; YOLO-based weights trained on Roboflow Universe datasets | Check the training datasets' licences and the Ultralytics licence before commercial use |
 | `tracknet_ball.pt` | Tennis ball (TrackNet) | [yastrebksv/TennisProject](https://github.com/yastrebksv/TennisProject) | **No licence published** | **Personal evaluation only.** Not redistributable; must be replaced with your own trained model before any release that ships weights or any commercial use |
 | `tennis_bounce.cbm` | Tennis bounce classifier (CatBoost) | [yastrebksv/TennisProject](https://github.com/yastrebksv/TennisProject) | **No licence published** | Same as above. Without it the engine falls back to its built-in bounce rule |
+| `tennis_bounce_own.cbm` | Tennis bounce classifier (CatBoost), preferred when present | Trained by you on your labelled matches ([docs/training.md](training.md)) | Yours | Replaces `tennis_bounce.cbm` |
 
 The network definition in `inference-worker/worker/detect/tracknet.py` is our
 own implementation of the published TrackNet architecture (it only mirrors the

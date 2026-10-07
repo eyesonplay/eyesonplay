@@ -200,13 +200,14 @@ def _event_engine(
     match_id: str, cfg: MatchConfig, settings: WorkerSettings, frame_height: int
 ) -> EventEngine | TennisEventEngine:
     if cfg.sport == "tennis":
-        scorer = None
+        bounce_model = None
         if settings.inference_mode == "real":
-            from worker.detect.bounce_model import load_bounce_scorer
+            from worker.detect.bounce_model import load_bounce_model
 
-            scorer = load_bounce_scorer(settings.models_dir)  # learned bounces on real video
+            bounce_model = load_bounce_model(settings.models_dir)  # learned bounces on real video
+        learned = {"bounce_scorer": bounce_model.scorer, "bounce_probability": bounce_model.probability} if bounce_model else {}
         config = TennisConfig(
-            kickoff_offset_seconds=cfg.kickoff_offset_seconds, bounce_scorer=scorer, frame_height_px=frame_height
+            kickoff_offset_seconds=cfg.kickoff_offset_seconds, frame_height_px=frame_height, **learned
         )
         return TennisEventEngine(match_id, config)
     return EventEngine(match_id, EngineConfig(kickoff_offset_seconds=cfg.kickoff_offset_seconds))
