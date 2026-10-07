@@ -8,6 +8,18 @@
 
 ![EyesOnPlay: real-time sports video analysis, football mini pitch and tennis mini court](docs/images/hero.png)
 
+![The mini pitch and mini court animating live from tracking data](docs/images/demo.gif)
+
+- ⚽ **Goals from broadcast video:** all 8 goals of a Premier League highlights
+  video found, with the right team and score, including one given after a VAR
+  check (read from the on-screen scoreboard, timed at the goal).
+- 🎾 **Tennis from one camera:** court lines found automatically, ball tracked
+  with TrackNet, bounces called in or out, points scored.
+- 📺 **TV-style mini view** next to the video, in step with it, for both sports.
+- 🔌 **Live JSON feed** for your own apps: matches and events over WebSocket,
+  with API keys.
+- 🏠 **Self-hosted:** one `docker compose up`, HTTPS and sign-in for production.
+
 Real-time sports video analysis from a single broadcast camera, for football and
 tennis. An admin creates a match, points it at a live stream (HLS/RTMP), a video
 URL or an uploaded file, and starts AI processing. The dashboard shows the video
