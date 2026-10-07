@@ -77,8 +77,10 @@ class FFmpegSource:
         is_live: bool,
         settings: WorkerSettings,
         on_reconnect: ReconnectCallback | None = None,
+        realtime: bool = True,
     ) -> None:
         self._url = url
+        self._realtime = realtime  # files: play at native speed (live view); False for offline work
         self._fps = fps
         self.is_live = is_live
         self._settings = settings
@@ -108,7 +110,8 @@ class FFmpegSource:
         if self._url.startswith(("http://", "https://")):
             cmd += ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
         if not self.is_live:
-            cmd += ["-re"]  # play files at native speed so the dashboard stays in sync
+            if self._realtime:
+                cmd += ["-re"]  # play files at native speed so the dashboard stays in sync
             if start_ts > 0:
                 cmd += ["-ss", f"{start_ts:.3f}"]
         cmd += ["-i", self._url, "-an", "-vf", f"fps={self._fps}", "-f", "rawvideo", "-pix_fmt", "bgr24", "pipe:1"]

@@ -251,6 +251,9 @@ WebSocket and dashboard:
   `tennis_bounce.cbm` from [TennisProject](https://github.com/yastrebksv/TennisProject)
   go into the models folder. Without the bounce model a built-in rule is used.
   See [docs/third-party.md](docs/third-party.md).
+- **Your own bounce model:** label bounces on the dashboard (**Label** on a
+  match) and train a replacement with `python -m worker.training.bounce`; the
+  worker prefers it automatically. See [docs/training.md](docs/training.md).
 
 A worker takes any queued job, so run either the mock worker (Docker) or the
 native real-mode worker against one stack, not both.

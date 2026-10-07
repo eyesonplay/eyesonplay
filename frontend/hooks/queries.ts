@@ -19,6 +19,7 @@ export const queryKeys = {
   settings: ["settings"] as const,
   me: ["auth", "me"] as const,
   apiKeys: ["api-keys"] as const,
+  labels: (id: string) => ["matches", "labels", id] as const,
 };
 
 const LIVE_REFRESH_MS = 3_000;
@@ -47,6 +48,18 @@ export function useSessions(id: string) {
 
 export function useSummary() {
   return useQuery({ queryKey: queryKeys.summary, queryFn: api.summary, refetchInterval: LIVE_REFRESH_MS });
+}
+
+export function useLabels(id: string) {
+  return useQuery({ queryKey: queryKeys.labels(id), queryFn: () => api.getLabels(id), staleTime: Infinity });
+}
+
+export function useSaveLabels(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof api.saveLabels>[1]) => api.saveLabels(id, input),
+    onSuccess: (saved) => queryClient.setQueryData(queryKeys.labels(id), saved),
+  });
 }
 
 export function useApiKeys() {

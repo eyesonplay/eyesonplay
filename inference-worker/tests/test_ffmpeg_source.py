@@ -56,3 +56,11 @@ def test_private_stream_hosts_are_refused(settings):
 def test_network_protocols_cannot_read_local_files(clip):
     with pytest.raises(SourceError):
         probe(f"file:{clip}", 5, is_file=False)
+
+
+def test_files_play_at_native_speed_unless_read_offline(clip, settings):
+    live_view = FFmpegSource(str(clip), fps=10, is_live=False, settings=settings)
+    offline = FFmpegSource(str(clip), fps=10, is_live=False, settings=settings, realtime=False)
+
+    assert "-re" in live_view._command(0.0)
+    assert "-re" not in offline._command(0.0)

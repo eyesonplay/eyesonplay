@@ -1,5 +1,7 @@
-"""Learned tennis bounce detector (CatBoost, from yastrebksv/TennisProject;
-no licence on the weights: personal testing only, see docs/third-party.md).
+"""Learned tennis bounce detector (CatBoost). Our own model, trained on
+labelled matches with `python -m worker.training.bounce`, is preferred; the
+TennisProject model (yastrebksv/TennisProject, no licence on the weights:
+personal testing only, see docs/third-party.md) is the fallback.
 
 The features reproduce the original `prepare_features` for one frame: for
 lags 1 and 2 before and after, absolute x differences, signed y differences
@@ -8,7 +10,9 @@ and their ratios, in 1280x720 pixel coordinates.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from worker.logging import get_logger
@@ -16,7 +20,18 @@ from worker.logging import get_logger
 log = get_logger(component="bounce_model")
 
 DEFAULT_WEIGHTS = "tennis_bounce.cbm"
+OWN_WEIGHTS = "tennis_bounce_own.cbm"  # its threshold and metrics are in the .json beside it
+DEFAULT_PROBABILITY = 0.45
 EPS = 1e-15
+
+BounceScorer = Callable[[Sequence[tuple[float, float]]], float]
+
+
+@dataclass(frozen=True, slots=True)
+class BounceModel:
+    scorer: BounceScorer
+    probability: float  # a window scoring above this is a bounce
+    name: str
 
 
 def bounce_features(window: Sequence[tuple[float, float]]) -> list[float]:
@@ -36,10 +51,32 @@ def bounce_features(window: Sequence[tuple[float, float]]) -> list[float]:
     ]  # fmt: skip
 
 
-def load_bounce_scorer(models_dir: Path, name: str = DEFAULT_WEIGHTS) -> Callable[[Sequence[tuple[float, float]]], float] | None:
+def load_bounce_model(models_dir: Path) -> BounceModel | None:
+    """Our own trained model when installed, else the TennisProject one; None
+    (rule-based bounces) when neither can be loaded."""
+    own = load_bounce_scorer(models_dir, OWN_WEIGHTS, quiet=True)
+    if own is not None:
+        return BounceModel(own, _own_threshold(models_dir / OWN_WEIGHTS), OWN_WEIGHTS)
+    default = load_bounce_scorer(models_dir)
+    return BounceModel(default, DEFAULT_PROBABILITY, DEFAULT_WEIGHTS) if default is not None else None
+
+
+def _own_threshold(weights: Path) -> float:
+    meta = weights.with_suffix(".json")
+    try:
+        threshold = float(json.loads(meta.read_text())["threshold"])
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        log.warning("bounce model threshold unreadable; using the default", meta=str(meta), error=str(exc))
+        return DEFAULT_PROBABILITY
+    return threshold if 0.0 < threshold < 1.0 else DEFAULT_PROBABILITY
+
+
+def load_bounce_scorer(models_dir: Path, name: str = DEFAULT_WEIGHTS, quiet: bool = False) -> BounceScorer | None:
     """None (rule-based bounces) when the model or catboost is not installed."""
     path = models_dir / name
     if not path.is_file():
+        if quiet:
+            return None
         log.info("bounce model not installed; using the rule-based bounce detector", expected=str(path))
         return None
     try:

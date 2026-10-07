@@ -29,7 +29,7 @@ from app.core.users import bootstrap_admin, refuse_dev_admin
 from app.db.base import Base, create_engine, session_factory
 from app.db import models  # noqa: F401 - register tables
 from app.deps import origin_allowed, require_user
-from app.routers import api_keys, auth, events, feed, matches, media, processing, settings, system, uploads, ws
+from app.routers import api_keys, auth, events, feed, labels, matches, media, processing, settings, system, uploads, ws
 
 log = get_logger(component="main")
 REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
@@ -121,7 +121,7 @@ def create_app(
     # Dashboard routes need a signed-in user; the integration feed uses API keys,
     # the WebSocket checks the session itself, and liveness stays public.
     signed_in = [Depends(require_user)]
-    for module in (matches, processing, events, uploads, media, settings, system, api_keys):
+    for module in (matches, processing, events, labels, uploads, media, settings, system, api_keys):
         app.include_router(module.router, dependencies=signed_in)
     for public in (auth.router, system.public_router, ws.router, feed.router):
         app.include_router(public)

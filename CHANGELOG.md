@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+### Training
+- Labelling page: mark serves, hits, bounces, faults and points (tennis) or
+  goals, corners, shots and passes (football) with the keyboard while the
+  video plays; autosaved, exported in the benchmark format.
+- Train your own tennis bounce model from labelled matches
+  (`python -m worker.training.bounce`, see docs/training.md): the real
+  pipeline is recorded once per video, the model is evaluated against the
+  built-in rule and the installed model on held-out labels, and the worker
+  prefers it automatically.
+
 ### Football
 - Goals: the broadcast scoreboard is read on screen (RapidOCR) and a score that
   goes up by one is a `goal` for that team, timed at the "GOAL" graphic or the
