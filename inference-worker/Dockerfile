@@ -3,7 +3,7 @@
 #   real-cpu - real computer vision on CPU (ultralytics + CPU torch), e.g. on a Mac
 #   gpu      - real computer vision on NVIDIA GPUs (CUDA torch, NVML metrics)
 
-FROM python:3.12-slim AS cpu
+FROM python:3.14-slim AS cpu
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg \
